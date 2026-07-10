@@ -106,6 +106,80 @@ Avoid searching for: stable knowledge well within training data, questions answe
 
 **Guiding principle**: search when the cost of being wrong exceeds the cost of the search.
 
+### Proactive Memory
+
+Memory is a write–manage–read loop, not append-only storage. Follow these rules to keep recall useful and trustworthy.
+
+#### Task Transition Detection
+
+Detect when the user shifts between domains, projects, or tasks. On transition:
+- Recall memories scoped to the new context
+- Suppress memories from the previous context — do not let them leak into unrelated answers
+- If a recalled memory is from a different domain than the current task, explicitly disregard it rather than silently using it
+
+#### Consolidation of Repeated Episodes
+
+When the same correction, preference, or pattern appears across multiple sessions (roughly 3+ times), consolidate it into a single semantic fact via `retain`. Do not wait for the user to ask. One strong consolidated lesson beats several overlapping episodic captures.
+
+#### Memory Influence Transparency
+
+When a recalled memory materially shapes the answer, surface which memory influenced it. Example: "I'm suggesting X because you noted last month that you prefer Y." This builds trust and lets the user correct stale memories before they cause harm.
+
+#### Privacy and Sensitivity Gating
+
+Before storing anything via `retain` or `learn`, check for sensitive content:
+- PII (names, IDs, emails, phone numbers, addresses)
+- Credentials, tokens, secrets
+- Health, relationship, or financial details
+- Personality inferences or behavioral profiles
+
+If detected: skip storage unless the user explicitly asked to remember it. When in doubt, ask.
+
+#### Time-Sensitive Expiry
+
+Tag memories with natural half-lives. Before storing, consider:
+- Version-specific facts ("API v2.3 has a breaking change") → expire when version is superseded
+- Sprint-scoped facts ("using staging server this sprint") → expire at sprint boundary
+- Experimental results → flag as subject to new data
+
+When you encounter evidence that a stored memory is outdated, proactively invalidate or update it. Do not leave stale facts competing with current ones.
+
+#### Contradiction Detection
+
+When current evidence contradicts a stored memory:
+1. Invalidate the old memory (use `memory_edit` with `op: invalidate`, pointing at the replacement if one exists)
+2. Store the corrected fact
+3. Do not leave both versions alive — stale recall is worse than no recall
+
+#### Procedural vs. Factual Capture
+
+Distinguish what you are capturing:
+- **Fact** (who, what, when, why, preference, decision) → `retain`
+- **Procedure** (repeatable sequence of steps, debugging recipe, setup workflow) → `manage_skill`
+
+One strong, specific lesson beats three vague ones. Capture sparingly — if it will not be reused, it does not belong in memory.
+
+#### Preemptive Recall at Known Pain Points
+
+Before the user hits a known snag, surface the warning. If you recall that a particular API version has a breaking change, a config caused a crash last time, or a dependency has a known issue — raise it proactively when the user approaches the same territory. Do not wait to be asked.
+
+#### Cross-Domain Isolation
+
+When recalling, scope the query to the current task context. If the user is working on task A, do not surface memories from unrelated task B. Similarity-based recall can leak across domains — compensate by being deliberate about what the recall query targets and by discarding off-domain results.
+
+#### Memory Hygiene and Forgetting
+
+Periodically review stored memories. Forget (`memory_edit` with `op: forget`) memories that are:
+- Demonstrably outdated and not superseded by a stored replacement
+- Low-importance and never recalled across sessions
+- Superseded by better information (prefer `invalidate` with a replacement pointer when one exists)
+- Captured speculatively and never confirmed useful
+
+Memory that is not pulling its weight is noise that degrades recall quality.
+
+**Guiding principle**: remember the right things at the right time at the right level of abstraction — and forget the rest.
+
+
 ## Child DOX Index
 
 - **backend/** — Python FastAPI backend (app code, tests, configuration)
