@@ -45,9 +45,9 @@ export default function Documents() {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh' }}>
+    <div style={{ display: 'flex', height: '100%', minHeight: 0 }}>
       {/* Collection Sidebar */}
-      <div style={{ width: '280px', borderRight: '1px solid #ddd', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ width: '280px', flexShrink: 0, borderRight: '1px solid #ddd', display: 'flex', flexDirection: 'column', height: '100%' }}>
         <div style={{ padding: '15px', borderBottom: '1px solid #ddd' }}>
           <h2 style={{ margin: 0, fontSize: '18px' }}>Collections</h2>
         </div>
@@ -61,7 +61,7 @@ export default function Documents() {
       </div>
 
       {/* Document List */}
-      <div style={{ flex: 1, overflow: 'auto' }}>
+      <div style={{ flex: 1, minWidth: 0, overflow: 'auto' }}>
         {selectedCollection ? (
           <DocumentList collection={selectedCollection} />
         ) : (

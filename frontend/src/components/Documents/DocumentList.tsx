@@ -65,14 +65,15 @@ export default function DocumentList({ collection }: DocumentListProps) {
   }
 
   return (
-    <div style={{ padding: '20px', height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <div>
+    <div style={{ padding: '20px', height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexShrink: 0, gap: '15px', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <h2 style={{ margin: 0, fontSize: '18px' }}>{collection.name}</h2>
           {collection.description && (
             <p style={{ margin: '5px 0 0', color: '#666', fontSize: '14px' }}>{collection.description}</p>
           )}
         </div>
+        <div style={{ flexShrink: 0 }}>
         <div>
           <input
             ref={fileInputRef}
@@ -95,6 +96,7 @@ export default function DocumentList({ collection }: DocumentListProps) {
             {uploading ? 'Uploading...' : 'Upload Document'}
           </button>
         </div>
+        </div>
       </div>
 
       {loading ? (
@@ -105,8 +107,8 @@ export default function DocumentList({ collection }: DocumentListProps) {
           <p style={{ fontSize: '14px' }}>Upload a document to get started</p>
         </div>
       ) : (
-        <div style={{ flex: 1, overflow: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+          <table style={{ width: '100%', minWidth: '600px', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ backgroundColor: '#f5f5f5', borderBottom: '2px solid #ddd' }}>
                 <th style={{ padding: '12px', textAlign: 'left' }}>File Name</th>

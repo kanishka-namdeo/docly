@@ -15,6 +15,7 @@ This AGENTS.md covers the `frontend/src/` directory:
 - `lib/` — Utility libraries and helpers
 - `App.tsx` — Root application component with routing
 - `main.tsx` — Application entry point
+- `index.css` — Global styles (box-sizing reset, scrollbar styling, focus styles)
 
 ## Local Contracts
 
@@ -68,7 +69,6 @@ npm run type-check
 ```bash
 cd frontend
 npm run lint
-```
 
 ### Key Patterns
 - Functional components with hooks
@@ -76,6 +76,7 @@ npm run lint
 - Service layer for API communication
 - React Router for client-side routing
 - Inline styles (current approach)
+- Flex layout with `flexShrink: 0` for fixed-width sidebars and `minWidth: 0` for flex children to prevent overflow
 
 ### Adding New Features
 1. Define types in `types/` if needed

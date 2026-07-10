@@ -5,7 +5,7 @@ export default function Sidebar() {
   const isActive = (path: string) => location.pathname === path
 
   return (
-    <div style={{ width: '200px', backgroundColor: '#f5f5f5', padding: '20px', borderRight: '1px solid #ddd' }}>
+    <div style={{ width: '200px', flexShrink: 0, backgroundColor: '#f5f5f5', padding: '20px', borderRight: '1px solid #ddd', display: 'flex', flexDirection: 'column' }}>
       <h2 style={{ marginBottom: '20px' }}>Doc Assistant</h2>
       <nav>
         <ul style={{ listStyle: 'none', padding: 0 }}>

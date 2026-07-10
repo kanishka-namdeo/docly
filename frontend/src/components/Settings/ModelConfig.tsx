@@ -68,7 +68,7 @@ export default function ModelConfig() {
   if (loading) return <div>Loading...</div>
 
   return (
-    <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '20px' }}>
+    <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '20px', overflow: 'hidden' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
         <h2 style={{ margin: 0 }}>Model Configuration</h2>
         <button

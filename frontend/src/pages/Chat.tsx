@@ -95,8 +95,8 @@ export default function Chat() {
   }
 
   return (
-    <div style={{ display: 'flex', height: '100vh' }}>
-      <div style={{ width: '250px', borderRight: '1px solid #ddd', padding: '10px', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ display: 'flex', height: '100%', minHeight: 0 }}>
+      <div style={{ width: '250px', flexShrink: 0, borderRight: '1px solid #ddd', padding: '10px', display: 'flex', flexDirection: 'column', height: '100%' }}>
         <button
           onClick={handleNewChat}
           disabled={!selectedProvider}
@@ -171,7 +171,7 @@ export default function Chat() {
         </div>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
         {selectedConversation ? (
           <ChatViewWrapper
             key={selectedConversation.id}
@@ -222,10 +222,10 @@ function ChatViewWrapper({
   return (
     <AssistantRuntimeProvider runtime={runtime}>
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ padding: '15px 20px', borderBottom: '1px solid #ddd' }}>
+        <div style={{ padding: '15px 20px', borderBottom: '1px solid #ddd', flexShrink: 0 }}>
           <h2 style={{ margin: 0, fontSize: '18px' }}>Chat</h2>
         </div>
-        <div style={{ flex: 1, overflow: 'hidden' }}>
+        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <AssistantChatView />
         </div>
       </div>

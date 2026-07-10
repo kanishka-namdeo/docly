@@ -72,8 +72,8 @@ function AssistantMessageContent() {
 
 export default function AssistantChatView() {
   return (
-    <ThreadPrimitive.Root style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <ThreadPrimitive.Viewport style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
+    <ThreadPrimitive.Root style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+      <ThreadPrimitive.Viewport style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '20px' }}>
         <ThreadPrimitive.Empty>
           <div style={{ textAlign: 'center', color: '#999', padding: '40px' }}>
             No messages yet. Start the conversation!
@@ -82,15 +82,15 @@ export default function AssistantChatView() {
         <ThreadPrimitive.Messages
           components={{
             UserMessage: () => (
-              <MessagePrimitive.Root>
-                <div style={{ alignSelf: 'flex-end', maxWidth: '80%', padding: '12px 16px', borderRadius: '12px', backgroundColor: '#0066cc', color: 'white' }}>
+              <MessagePrimitive.Root style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                <div style={{ maxWidth: '80%', padding: '12px 16px', borderRadius: '12px', backgroundColor: '#0066cc', color: 'white' }}>
                   <MessagePrimitive.Content />
                 </div>
               </MessagePrimitive.Root>
             ),
             AssistantMessage: () => (
-              <MessagePrimitive.Root>
-                <div style={{ alignSelf: 'flex-start', maxWidth: '80%', padding: '12px 16px', borderRadius: '12px', backgroundColor: '#f0f0f0', color: '#333' }}>
+              <MessagePrimitive.Root style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '12px' }}>
+                <div style={{ maxWidth: '80%', padding: '12px 16px', borderRadius: '12px', backgroundColor: '#f0f0f0', color: '#333' }}>
                   <AssistantMessageContent />
                 </div>
               </MessagePrimitive.Root>
@@ -98,7 +98,7 @@ export default function AssistantChatView() {
           }}
         />
       </ThreadPrimitive.Viewport>
-      <div style={{ padding: '15px 20px', borderTop: '1px solid #ddd' }}>
+      <div style={{ padding: '15px 20px', borderTop: '1px solid #ddd', flexShrink: 0 }}>
         <ComposerPrimitive.Root style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
           <ComposerPrimitive.Input
             style={{
