@@ -19,6 +19,14 @@ async_session = sessionmaker(
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        # Add reasoning column if it doesn't exist (for existing databases)
+        try:
+            from sqlalchemy import text
+            await conn.execute(text(
+                "ALTER TABLE messages ADD COLUMN reasoning TEXT"
+            ))
+        except Exception:
+            pass  # Column already exists or table doesn't exist yet
 
 @asynccontextmanager
 async def get_db_session():

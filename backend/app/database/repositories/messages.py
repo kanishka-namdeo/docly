@@ -6,12 +6,13 @@ class MessageRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
     
-    async def create(self, conversation_id: str, role: str, content: str, citations: list = None) -> Message:
+    async def create(self, conversation_id: str, role: str, content: str, citations: list = None, reasoning: str = None) -> Message:
         message = Message(
             conversation_id=conversation_id,
             role=role,
             content=content,
-            citations=citations or []
+            citations=citations or [],
+            reasoning=reasoning
         )
         self.session.add(message)
         await self.session.flush()

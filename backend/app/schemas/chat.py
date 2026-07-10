@@ -22,3 +22,5 @@ class ChatResponse(BaseModel):
     message_id: str
     content: str
     citations: list[ChatCitation] = []
+    reasoning: Optional[str] = None
+    iterations: Optional[int] = None

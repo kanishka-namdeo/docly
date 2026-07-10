@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Conversation, ProviderConfig } from '../types'
+import { AssistantRuntimeProvider } from '@assistant-ui/react'
+import { Conversation, ProviderConfig, Message } from '../types'
 import { conversationsApi, settingsApi } from '../services/api'
-import ChatWindow from '../components/Chat/ChatWindow'
+import { useDocAssistantRuntime, convertBackendMessage } from '../lib/assistant-runtime'
+import AssistantChatView from '../components/Chat/AssistantChatView'
 
 function MessageSquareIcon({ size = 16, style }: { size?: number; style?: React.CSSProperties }) {
   return (
@@ -27,6 +29,8 @@ export default function Chat() {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null)
   const [selectedProvider, setSelectedProvider] = useState<string>('')
   const [loading, setLoading] = useState(true)
+  const [backendMessages, setBackendMessages] = useState<Message[]>([])
+  const [messagesLoading, setMessagesLoading] = useState(false)
 
   useEffect(() => {
     async function loadData() {
@@ -48,6 +52,18 @@ export default function Chat() {
     }
     loadData()
   }, [])
+
+  useEffect(() => {
+    if (!selectedConversation) {
+      setBackendMessages([])
+      return
+    }
+    setMessagesLoading(true)
+    conversationsApi.getMessages(selectedConversation.id)
+      .then(setBackendMessages)
+      .catch(err => console.error('Failed to load messages:', err))
+      .finally(() => setMessagesLoading(false))
+  }, [selectedConversation?.id])
 
   const handleNewChat = async () => {
     if (!selectedProvider) return
@@ -157,9 +173,12 @@ export default function Chat() {
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
         {selectedConversation ? (
-          <ChatWindow
-            conversation={selectedConversation}
+          <ChatViewWrapper
+            key={selectedConversation.id}
+            conversationId={selectedConversation.id}
             providerConfigId={selectedProvider}
+            backendMessages={backendMessages}
+            messagesLoading={messagesLoading}
           />
         ) : (
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
@@ -171,5 +190,45 @@ export default function Chat() {
         )}
       </div>
     </div>
+  )
+}
+
+function ChatViewWrapper({
+  conversationId,
+  providerConfigId,
+  backendMessages,
+  messagesLoading,
+}: {
+  conversationId: string
+  providerConfigId: string
+  backendMessages: Message[]
+  messagesLoading: boolean
+}) {
+  const initialMessages = backendMessages.map(convertBackendMessage)
+  const runtime = useDocAssistantRuntime({
+    conversationId,
+    providerConfigId,
+    initialMessages,
+  })
+
+  if (messagesLoading) {
+    return (
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        Loading messages...
+      </div>
+    )
+  }
+
+  return (
+    <AssistantRuntimeProvider runtime={runtime}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{ padding: '15px 20px', borderBottom: '1px solid #ddd' }}>
+          <h2 style={{ margin: 0, fontSize: '18px' }}>Chat</h2>
+        </div>
+        <div style={{ flex: 1, overflow: 'hidden' }}>
+          <AssistantChatView />
+        </div>
+      </div>
+    </AssistantRuntimeProvider>
   )
 }

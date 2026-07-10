@@ -42,71 +42,25 @@ async def send_chat_message(
         )
 
     # Save user message
-    await msg_repo.create(
+    user_msg = await msg_repo.create(
         conversation_id=conversation.id,
         role="user",
         content=body.message,
     )
 
-    # RAG retrieval
-    citations = []
-    context_text = ""
-
-    try:
-        from app.retrieval.hybrid_search import HybridSearch
-        from app.retrieval.qdrant_client import QdrantClient
-        from app.ingestion.embedder import LMStudioEmbedder
-
-        embedder = LMStudioEmbedder()
-        qdrant = QdrantClient()
-        hybrid_search = HybridSearch(qdrant=qdrant, embedder=embedder)
-
-        search_results = await hybrid_search.search(
-            body.message,
-            limit=body.limit,
-            collection_id=body.collection_id,
-        )
-
-        for r in search_results:
-            citations.append(
-                ChatCitation(
-                    text=r["text"],
-                    score=r["score"],
-                    file_path=r["file_path"],
-                    collection_id=r.get("collection_id"),
-                    document_id=r.get("document_id"),
-                )
-            )
-            context_text += f"\n---\n{r['text']}"
-
-    except Exception:
-        pass  # Graceful fallback: no context if search fails
-
-    # Build messages for LLM
-    system_prompt = (
-        "You are a helpful document assistant. Answer questions based on the "
-        "provided context. If the context doesn't contain relevant information, "
-        "say so honestly. Cite sources when possible."
-    )
-
-    messages = [{"role": "system", "content": system_prompt}]
-
-    if context_text:
-        messages.append(
-            {
-                "role": "system",
-                "content": f"Context documents:\n{context_text}",
-            }
-        )
-
-    messages.append({"role": "user", "content": body.message})
+    # Get conversation history for agentic RAG
+    history_messages = await msg_repo.get_by_conversation(conversation.id, limit=10)
+    conversation_history = [
+        {"role": msg.role, "content": msg.content}
+        for msg in history_messages
+        if msg.id != user_msg.id  # Exclude the message we just created
+    ]
 
     # Get LLM provider config
     provider_repo = ProviderConfigRepository(session)
     provider_configs = await provider_repo.get_all()
 
     if provider_configs:
-        # Use the first configured provider
         config = provider_configs[0]
         provider_dict = {
             "type": config.type,
@@ -115,9 +69,7 @@ async def send_chat_message(
             "base_url": config.base_url,
         }
     else:
-        # Default to custom (LM Studio) if no provider configured
         from app.config import settings
-
         provider_dict = {
             "type": "custom",
             "base_url": settings.lm_studio_url,
@@ -125,21 +77,57 @@ async def send_chat_message(
             "model": "default",
         }
 
-    # Generate response
+    # Initialize agentic RAG pipeline
     try:
         from app.llm.client import LLMClient
+        from app.retrieval.hybrid_search import HybridSearch
+        from app.retrieval.qdrant_client import QdrantClient
+        from app.ingestion.embedder import LMStudioEmbedder
+        from app.agentic.controller import AgenticController
 
         llm_client = LLMClient(provider_dict)
-        response_text = await llm_client.chat(messages)
-    except Exception as e:
-        response_text = f"Error generating response: {str(e)}"
+        embedder = LMStudioEmbedder()
+        qdrant = QdrantClient()
+        hybrid_search = HybridSearch(qdrant=qdrant, embedder=embedder)
+        controller = AgenticController(llm=llm_client, search=hybrid_search)
 
-    # Save assistant response
+        # Process through agentic RAG
+        result = await controller.process(
+            query=body.message,
+            collection_id=body.collection_id,
+            conversation_history=conversation_history,
+        )
+
+        response_text = result["answer"]
+        reasoning = result.get("reasoning", "")
+        iterations = result.get("iterations", 0)
+
+        # Convert citations
+        citations = []
+        for citation_data in result.get("citations", []):
+            citations.append(ChatCitation(
+                text=citation_data.get("text", ""),
+                score=citation_data.get("score", 0.0),
+                file_path=citation_data.get("file_path", ""),
+                collection_id=citation_data.get("collection_id"),
+                document_id=citation_data.get("document_id"),
+            ))
+    except Exception as e:
+        # Fallback to simple RAG if agentic pipeline fails
+        import traceback
+        error_detail = traceback.format_exc()
+        response_text = f"Error in agentic RAG pipeline: {str(e)}"
+        reasoning = f"Agentic pipeline failed, falling back to simple response.\n\nError details:\n{error_detail}"
+        citations = []
+        iterations = 0
+
+    # Save assistant response with reasoning
     assistant_message = await msg_repo.create(
         conversation_id=conversation.id,
         role="assistant",
         content=response_text,
         citations=[c.model_dump() for c in citations],
+        reasoning=reasoning,
     )
 
     return ChatResponse(
@@ -147,4 +135,7 @@ async def send_chat_message(
         message_id=assistant_message.id,
         content=response_text,
         citations=citations,
+        reasoning=reasoning,
+        iterations=iterations,
     )
+

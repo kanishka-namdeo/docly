@@ -47,6 +47,7 @@ export interface Message {
   role: string
   content: string
   citations: Citation[] | null
+  reasoning: string | null
   created_at: string | null
 }
 
@@ -78,12 +79,13 @@ export interface ChatRequest {
   limit?: number
   provider_config_id?: string
 }
-
 export interface ChatResponse {
   conversation_id: string
   message_id: string
   content: string
   citations: Citation[]
+  reasoning?: string
+  iterations?: number
 }
 
 export interface LMStudioStatus {

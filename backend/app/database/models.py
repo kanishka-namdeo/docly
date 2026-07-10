@@ -53,6 +53,7 @@ class Message(Base):
     role = Column(String, nullable=False)
     content = Column(Text, nullable=False)
     citations = Column(JSON, nullable=True, default=list)
+    reasoning = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     
     conversation = relationship("Conversation", back_populates="messages")
