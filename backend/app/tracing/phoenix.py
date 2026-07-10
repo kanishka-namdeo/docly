@@ -33,6 +33,7 @@ try:
 
 except ImportError:
     logger.warning("arize-phoenix not installed. PhoenixTracer is a stub.")
+    from app.config import settings
 
     class PhoenixTracer:
         def __init__(self):

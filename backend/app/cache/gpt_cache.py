@@ -32,8 +32,8 @@ try:
             """Get the cache instance for use with LLM clients."""
             return cache
 
-except ImportError:
-    logger.warning("gptcache not installed. GPTCacheWrapper is a stub.")
+except Exception:
+    logger.warning("gptcache not available. GPTCacheWrapper is a stub.")
 
     class GPTCacheWrapper:
         def __init__(self):
