@@ -3,8 +3,8 @@
   "productName": "Doc Assistant",
   "version": "0.1.0",
 "build": {
-    "beforeDevCommand": null,
-    "beforeBuildCommand": "cd ../frontend && npm run build",
+    "beforeDevCommand": "",
+    "beforeBuildCommand": "cd frontend && npm run build",
     "devUrl": "http://localhost:1420",
     "frontendDist": "../frontend/dist"
   },

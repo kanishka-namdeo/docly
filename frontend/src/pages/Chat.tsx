@@ -4,23 +4,24 @@ import { Conversation, ProviderConfig, Message, Collection } from '../types'
 import { conversationsApi, settingsApi, collectionsApi } from '../services/api'
 import { useDocAssistantRuntime, convertBackendMessage } from '../lib/assistant-runtime'
 import AssistantChatView from '../components/Chat/AssistantChatView'
-import { useToast } from '../components/common/ToastContext'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { PlusCircle, Pencil, X, MessageSquare } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
-function MessageSquareIcon({ size = 16, style }: { size?: number; style?: React.CSSProperties }) {
+function MessageSquareIcon({ size = 16, className }: { size?: number; className?: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}>
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
+    <MessageSquare width={size} height={size} className={className} />
   )
 }
 
 function PlusCircleIcon({ size = 16 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <line x1="12" y1="8" x2="12" y2="16" />
-      <line x1="8" y1="12" x2="16" y2="12" />
-    </svg>
+    <PlusCircle width={size} height={size} />
   )
 }
 
@@ -37,94 +38,71 @@ export default function Chat() {
   const [editingConversationId, setEditingConversationId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [lmStudioConnected, setLmStudioConnected] = useState(false)
-  const { showToast } = useToast()
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        const [convos, provs, colls, lmStatus] = await Promise.all([
-          conversationsApi.list(),
-          settingsApi.listProviders(),
-          collectionsApi.list(),
-          settingsApi.checkLMStudio(),
-        ])
-        setConversations(convos)
-        setProviders(provs)
-        setCollections(colls)
-        setLmStudioConnected(lmStatus.connected)
-        if (provs.length > 0) {
-          setSelectedProvider(provs[0].id)
-        }
-      } catch (err) {
-        console.error('Failed to load chat data:', err)
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadData()
+    Promise.all([
+      settingsApi.checkLMStudio().then(s => setLmStudioConnected(s.connected)).catch(() => setLmStudioConnected(false)),
+      settingsApi.listProviders().then(setProviders).catch(() => setProviders([])),
+      collectionsApi.list().then(setCollections).catch(() => setCollections([])),
+      conversationsApi.list().then(setConversations).catch(() => setConversations([])),
+    ]).finally(() => setLoading(false))
   }, [])
 
   useEffect(() => {
-    if (!selectedConversation) {
+    if (!selectedConversation?.id) {
       setBackendMessages([])
       return
     }
-    // Sync collection ID from conversation
-    setSelectedCollectionId(selectedConversation.collection_id)
     setMessagesLoading(true)
     conversationsApi.getMessages(selectedConversation.id)
       .then(setBackendMessages)
       .catch(err => {
         console.error('Failed to load messages:', err)
-        showToast('Failed to load messages', 'error')
+        toast.error('Failed to load conversation messages')
+        setBackendMessages([])
       })
       .finally(() => setMessagesLoading(false))
   }, [selectedConversation?.id])
 
-  const handleNewChat = async () => {
-    if (!selectedProvider) return
-    try {
-      const newConv = await conversationsApi.create({
-        title: `New Chat ${conversations.length + 1}`,
-        collection_id: selectedCollectionId || undefined,
-      })
-      setConversations([newConv, ...conversations])
-      setSelectedConversation(newConv)
-    } catch (err) {
-      console.error('Failed to create conversation:', err)
-      showToast('Failed to create conversation', 'error')
-    }
-  }
 
   const handleDeleteConversation = async (id: string) => {
+    if (!confirm('Delete this conversation?')) return
     try {
       await conversationsApi.delete(id)
       setConversations(conversations.filter(c => c.id !== id))
       if (selectedConversation?.id === id) {
         setSelectedConversation(null)
       }
-      showToast('Conversation deleted', 'success')
+      toast.success('Conversation deleted')
     } catch (err) {
       console.error('Failed to delete conversation:', err)
-      showToast('Failed to delete conversation', 'error')
+      toast.error('Failed to delete conversation')
     }
   }
 
   const handleRenameConversation = async (id: string, title: string) => {
     try {
-      const updated = await conversationsApi.update(id, { title })
-      setConversations(conversations.map(c => c.id === id ? updated : c))
-      if (selectedConversation?.id === id) {
-        setSelectedConversation(updated)
-      }
+      await conversationsApi.update(id, { title })
+      setConversations(conversations.map(c => c.id === id ? { ...c, title } : c))
+      toast.success('Conversation renamed')
     } catch (err) {
       console.error('Failed to rename conversation:', err)
-      showToast('Failed to rename conversation', 'error')
+      toast.error('Failed to rename conversation')
+    }
+  }
+  const handleNewChat = async () => {
+    try {
+      const conv = await conversationsApi.create({ title: 'New Conversation' })
+      setConversations([conv, ...conversations])
+      setSelectedConversation(conv)
+    } catch (err) {
+      console.error('Failed to create conversation:', err)
+      toast.error('Failed to create conversation')
     }
   }
 
   if (loading) {
-    return <div style={{ padding: '20px' }}>Loading...</div>
+    return <div className="p-5">Loading...</div>
   }
 
   const setupComplete = lmStudioConnected && providers.length > 0
@@ -133,186 +111,153 @@ export default function Chat() {
   if (providers.length === 0) setupIssues.push('No LLM provider configured')
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
+    <div className="flex flex-col h-full min-h-0">
       {!setupComplete && (
-        <div style={{
-          padding: '12px 20px',
-          backgroundColor: '#fff3cd',
-          borderBottom: '1px solid #ffc107',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-        }}>
-          <span style={{ fontSize: '14px', color: '#856404' }}>
+        <div className="p-4 bg-yellow-50 border-b border-yellow-200 flex items-center gap-4 dark:bg-yellow-900/20 dark:border-yellow-800">
+          <span className="text-sm text-yellow-800 dark:text-yellow-200">
             ⚠️ Setup incomplete: {setupIssues.join(', ')}
           </span>
-          <a href="/settings" style={{ fontSize: '13px', color: '#0066cc', textDecoration: 'none' }}>
+          <a href="/settings" className="text-sm text-primary hover:underline">
             Go to Settings →
           </a>
         </div>
       )}
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
-        <div style={{ width: '250px', flexShrink: 0, borderRight: '1px solid #ddd', padding: '10px', display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <button
-          onClick={handleNewChat}
-          disabled={!setupComplete}
-          title={!setupComplete ? 'Complete setup in Settings first' : 'Start a new chat'}
-          style={{
-            padding: '10px',
-            marginBottom: '10px',
-            backgroundColor: setupComplete ? '#0066cc' : '#ccc',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: setupComplete ? 'pointer' : 'not-allowed',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-          }}
-        >
-          <PlusCircleIcon size={16} />
-          New Chat
-        </button>
-
-        <div style={{ marginBottom: '10px' }}>
-          <label style={{ fontSize: '12px', color: '#666' }}>Provider:</label>
-          <select
-            value={selectedProvider}
-            onChange={(e) => setSelectedProvider(e.target.value)}
-            style={{ width: '100%', padding: '5px', marginTop: '5px' }}
+      <div className="flex flex-1 min-h-0">
+        <div className="w-[250px] flex-shrink-0 border-r border-border p-2 flex flex-col h-full">
+          <Button
+            onClick={handleNewChat}
+            disabled={!setupComplete}
+            title={!setupComplete ? 'Complete setup in Settings first' : 'Start a new chat'}
+            variant="default"
+            className="w-full mb-2 justify-start gap-2"
           >
-            {providers.map(p => (
-              <option key={p.id} value={p.id}>{p.name} ({p.model})</option>
-            ))}
-          </select>
-        </div>
+            <PlusCircleIcon size={16} />
+            New Chat
+          </Button>
 
-        <div style={{ marginBottom: '10px' }}>
-          <label style={{ fontSize: '12px', color: '#666' }}>Scope:</label>
-          <select
-            value={selectedCollectionId || ''}
-            onChange={(e) => setSelectedCollectionId(e.target.value || null)}
-            style={{ width: '100%', padding: '5px', marginTop: '5px' }}
-          >
-            <option value="">All Collections</option>
-            {collections.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
-        </div>
+          <div className="mb-2">
+            <label className="text-xs text-muted-foreground">Provider:</label>
+            <Select value={selectedProvider} onValueChange={setSelectedProvider}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Select provider" />
+              </SelectTrigger>
+              <SelectContent>
+                {providers.map(p => (
+                  <SelectItem key={p.id} value={p.id}>{p.name} ({p.model})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-        <div style={{ flex: 1, overflowY: 'auto' }}>
-          {conversations.length === 0 ? (
-            <p style={{ color: '#999', fontSize: '14px' }}>No conversations yet</p>
-          ) : (
-            conversations.map(conv => (
-              <div
-                key={conv.id}
-                onClick={() => setSelectedConversation(conv)}
-                style={{
-                  padding: '10px',
-                  marginBottom: '5px',
-                  backgroundColor: selectedConversation?.id === conv.id ? '#e6f0ff' : 'transparent',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                {editingConversationId === conv.id ? (
-                  <input
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                    onBlur={() => {
-                      if (editTitle.trim() && editTitle !== conv.title) {
-                        handleRenameConversation(conv.id, editTitle.trim())
-                      }
-                      setEditingConversationId(null)
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
+          <div className="mb-2">
+            <label className="text-xs text-muted-foreground">Scope:</label>
+            <Select value={selectedCollectionId || ''} onValueChange={(v) => setSelectedCollectionId(v || null)}>
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="All Collections" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Collections</SelectItem>
+                {collections.map(c => (
+                  <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <ScrollArea className="flex-1">
+            {conversations.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No conversations yet</p>
+            ) : (
+              conversations.map(conv => (
+                <div
+                  key={conv.id}
+                  onClick={() => setSelectedConversation(conv)}
+                  className={cn(
+                    'p-2 mb-1 rounded-md cursor-pointer flex justify-between items-center',
+                    selectedConversation?.id === conv.id ? 'bg-secondary' : 'hover:bg-muted'
+                  )}
+                >
+                  {editingConversationId === conv.id ? (
+                    <Input
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      onBlur={() => {
                         if (editTitle.trim() && editTitle !== conv.title) {
                           handleRenameConversation(conv.id, editTitle.trim())
                         }
                         setEditingConversationId(null)
-                      }
-                      if (e.key === 'Escape') setEditingConversationId(null)
-                    }}
-                    autoFocus
-                    style={{
-                      flex: 1,
-                      padding: '2px 4px',
-                      border: '1px solid #0066cc',
-                      borderRadius: '2px',
-                      fontSize: '14px',
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                ) : (
-                  <>
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      <MessageSquareIcon size={14} style={{ marginRight: '5px', verticalAlign: 'middle' }} />
-                      {conv.title}
-                      {conv.collection_id && (
-                        <span style={{ marginLeft: '8px', fontSize: '11px', color: '#666', backgroundColor: '#e0e0e0', padding: '2px 6px', borderRadius: '10px' }}>
-                          📚 {collections.find(c => c.id === conv.collection_id)?.name || 'Unknown'}
-                        </span>
-                      )}
-                    </span>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setEditingConversationId(conv.id); setEditTitle(conv.title) }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: '#666',
-                        padding: '2px',
-                        marginRight: '4px',
                       }}
-                      title="Rename"
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleDeleteConversation(conv.id) }}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: '#999',
-                        padding: '2px',
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          if (editTitle.trim() && editTitle !== conv.title) {
+                            handleRenameConversation(conv.id, editTitle.trim())
+                          }
+                          setEditingConversationId(null)
+                        }
+                        if (e.key === 'Escape') setEditingConversationId(null)
                       }}
-                    >
-                      ×
-                    </button>
-                  </>
-                )}
-              </div>
-            ))
-          )}
-        </div>
+                      autoFocus
+                      className="flex-1 h-auto py-0.5 px-1 text-sm"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  ) : (
+                    <>
+                      <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm">
+                        <MessageSquareIcon size={14} className="inline mr-1 align-middle" />
+                        {conv.title}
+                        {conv.collection_id && (
+                          <Badge variant="secondary" className="ml-2 text-[10px] px-1.5 py-0 rounded-full">
+                            📚 {collections.find(c => c.id === conv.collection_id)?.name || 'Unknown'}
+                          </Badge>
+                        )}
+                      </span>
+                      <div className="flex gap-0.5">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={(e) => { e.stopPropagation(); setEditingConversationId(conv.id); setEditTitle(conv.title) }}
+                          title="Rename"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-muted-foreground"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteConversation(conv.id) }}
+                          title="Delete"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))
+            )}
+          </ScrollArea>
         </div>
 
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', height: '100%' }}>
-        {selectedConversation ? (
-          <ChatViewWrapper
-            key={selectedConversation.id}
-            conversationId={selectedConversation.id}
-            providerConfigId={selectedProvider}
-            collectionId={selectedCollectionId}
-            backendMessages={backendMessages}
-            messagesLoading={messagesLoading}
-          />
-        ) : (
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#999' }}>
-            <div style={{ textAlign: 'center' }}>
-              <MessageSquareIcon size={48} style={{ marginBottom: '10px' }} />
-              <p>Select a conversation or start a new chat</p>
+        <div className="flex-1 min-w-0 flex flex-col h-full">
+          {selectedConversation ? (
+            <ChatViewWrapper
+              key={selectedConversation.id}
+              conversationId={selectedConversation.id}
+              providerConfigId={selectedProvider}
+              collectionId={selectedCollectionId}
+              backendMessages={backendMessages}
+              messagesLoading={messagesLoading}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-muted-foreground">
+              <div className="text-center">
+                <MessageSquareIcon size={48} className="mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Select a conversation or start a new chat</p>
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
       </div>
     </div>
   )
@@ -341,7 +286,7 @@ function ChatViewWrapper({
 
   if (messagesLoading) {
     return (
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="flex-1 flex items-center justify-center">
         Loading messages...
       </div>
     )
@@ -349,11 +294,11 @@ function ChatViewWrapper({
 
   return (
     <AssistantRuntimeProvider runtime={runtime}>
-      <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ padding: '15px 20px', borderBottom: '1px solid #ddd', flexShrink: 0 }}>
-          <h2 style={{ margin: 0, fontSize: '18px' }}>Chat</h2>
+      <div className="flex flex-col h-full">
+        <div className="p-4 border-b border-border flex-shrink-0">
+          <h2 className="m-0 text-lg font-semibold">Chat</h2>
         </div>
-        <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
           <AssistantChatView />
         </div>
       </div>

@@ -79,6 +79,47 @@ async def delete_conversation(
     return None
 
 
+@router.post("/{conversation_id}/summarize")
+async def summarize_conversation(
+    conversation_id: str,
+    session: AsyncSession = Depends(get_session)
+):
+    """Generate a summary for a conversation using LLM."""
+    from app.llm.client import LLMClient
+    
+    conv_repo = ConversationRepository(session)
+    conversation = await conv_repo.get_by_id(conversation_id)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    
+    msg_repo = MessageRepository(session)
+    messages = await msg_repo.get_by_conversation(conversation_id)
+    
+    if not messages:
+        raise HTTPException(status_code=400, detail="No messages to summarize")
+    
+    # Build transcript
+    transcript = "\n".join([f"{m.role}: {m.content}" for m in messages])
+    
+    # Generate summary using LLM
+    llm = LLMClient()
+    prompt = f"Summarize this conversation in 2-3 sentences:\n\n{transcript}"
+    response = await llm.chat(prompt)
+    
+    # Save summary
+    updated = await conv_repo.update(conversation_id, summary=response)
+    
+    return ConversationResponse(
+        id=updated.id,
+        title=updated.title,
+        description=updated.description,
+        watch_path=updated.watch_path,
+        created_at=updated.created_at,
+        updated_at=updated.updated_at,
+        summary=updated.summary
+    )
+
+
 # --- Messages sub-routes ---
 
 @router.get("/{conversation_id}/messages", response_model=list[MessageResponse])

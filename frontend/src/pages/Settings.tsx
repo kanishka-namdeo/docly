@@ -1,17 +1,29 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import ModelConfig from '../components/Settings/ModelConfig'
 import EmbeddingConfig from '../components/Settings/EmbeddingConfig'
 import PreferencesConfig from '../components/Settings/PreferencesConfig'
 
 export default function Settings() {
   return (
-    <div style={{ padding: '30px', maxWidth: '900px', margin: '0 auto', height: '100%', overflow: 'auto' }}>
-      <h1 style={{ marginBottom: '30px' }}>Settings</h1>
+    <div className="p-6 max-w-[900px] mx-auto h-full overflow-auto">
+      <h1 className="mb-6 text-2xl font-semibold">Settings</h1>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
-        <ModelConfig />
-        <EmbeddingConfig />
-        <PreferencesConfig />
-      </div>
+      <Tabs defaultValue="model" className="w-full">
+        <TabsList>
+          <TabsTrigger value="model">Model</TabsTrigger>
+          <TabsTrigger value="embedding">Embedding</TabsTrigger>
+          <TabsTrigger value="preferences">Preferences</TabsTrigger>
+        </TabsList>
+        <TabsContent value="model">
+          <ModelConfig />
+        </TabsContent>
+        <TabsContent value="embedding">
+          <EmbeddingConfig />
+        </TabsContent>
+        <TabsContent value="preferences">
+          <PreferencesConfig />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

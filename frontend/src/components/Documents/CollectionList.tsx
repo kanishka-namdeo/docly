@@ -1,5 +1,31 @@
 import { useState } from 'react'
 import { Collection } from '../../types'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+  DialogClose,
+} from '@/components/ui/dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Pencil, Trash2, Plus } from 'lucide-react'
 
 interface CollectionListProps {
   collections: Collection[]
@@ -18,157 +44,209 @@ export default function CollectionList({
   onCreate,
   onRename,
 }: CollectionListProps) {
-  const [showCreateForm, setShowCreateForm] = useState(false)
+  const [createOpen, setCreateOpen] = useState(false)
   const [newName, setNewName] = useState('')
   const [newDescription, setNewDescription] = useState('')
+  const [renameOpen, setRenameOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!newName.trim()) return
     onCreate(newName.trim(), newDescription.trim())
     setNewName('')
     setNewDescription('')
-    setShowCreateForm(false)
+    setCreateOpen(false)
+  }
+
+  const handleRenameSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (editName.trim() && editName.trim() !== collections.find(c => c.id === editingId)?.name) {
+      onRename(editingId!, editName.trim())
+    }
+    setEditingId(null)
+    setRenameOpen(false)
+  }
+
+  const handleDeleteConfirm = () => {
+    if (deletingId) {
+      onDelete(deletingId)
+      setDeleteOpen(false)
+      setDeletingId(null)
+    }
+  }
+
+  const openRenameDialog = (collection: Collection) => {
+    setEditingId(collection.id)
+    setEditName(collection.name)
+    setRenameOpen(true)
+  }
+
+  const openDeleteDialog = (id: string) => {
+    setDeletingId(id)
+    setDeleteOpen(true)
   }
 
   return (
-    <div style={{ flex: 1, overflow: 'auto', padding: '10px' }}>
-      <button
-        onClick={() => setShowCreateForm(!showCreateForm)}
-        style={{
-          width: '100%',
-          padding: '10px',
-          marginBottom: '10px',
-          backgroundColor: '#28a745',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-        }}
-      >
-        + New Collection
-      </button>
+    <ScrollArea className="h-full w-full">
+      <div className="p-3 space-y-3">
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+          <DialogTrigger asChild>
+            <Button className="w-full" size="default">
+              <Plus className="mr-2 h-4 w-4" />
+              New Collection
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Create Collection</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleCreateSubmit}>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="create-name">Name</Label>
+                  <Input
+                    id="create-name"
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    placeholder="Collection name"
+                    autoFocus
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="create-description">Description (optional)</Label>
+                  <Textarea
+                    id="create-description"
+                    value={newDescription}
+                    onChange={(e) => setNewDescription(e.target.value)}
+                    placeholder="Description (optional)"
+                    rows={2}
+                    className="resize-none"
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button type="button" variant="outline" onClick={() => { setNewName(''); setNewDescription('') }}>
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <Button type="submit">Create</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
 
-      {showCreateForm && (
-        <form onSubmit={handleSubmit} style={{ marginBottom: '15px', padding: '10px', backgroundColor: '#f9f9f9', borderRadius: '4px' }}>
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Collection name"
-            style={{ width: '100%', padding: '8px', marginBottom: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-          />
-          <textarea
-            value={newDescription}
-            onChange={(e) => setNewDescription(e.target.value)}
-            placeholder="Description (optional)"
-            rows={2}
-            style={{ width: '100%', padding: '8px', marginBottom: '8px', border: '1px solid #ddd', borderRadius: '4px', resize: 'none' }}
-          />
-          <div style={{ display: 'flex', gap: '5px' }}>
-            <button type="submit" style={{ flex: 1, padding: '8px', backgroundColor: '#0066cc', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-              Create
-            </button>
-            <button
-              type="button"
-              onClick={() => { setShowCreateForm(false); setNewName(''); setNewDescription('') }}
-              style={{ flex: 1, padding: '8px', backgroundColor: '#6c757d', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+        {collections.length === 0 ? (
+          <p className="text-muted-foreground text-center py-5">No collections yet</p>
+        ) : (
+          collections.map((collection) => (
+            <div
+              key={collection.id}
+              onClick={() => onSelect(collection)}
+              className={`
+                p-3 mb-1 rounded-md cursor-pointer flex justify-between items-start gap-2
+                ${
+                  selectedId === collection.id
+                    ? 'bg-primary/10 border-2 border-primary'
+                    : 'bg-card border border-border hover:bg-accent/50'
+                }
+              `}
             >
-              Cancel
-            </button>
-          </div>
-        </form>
-      )}
-
-      {collections.length === 0 ? (
-        <p style={{ color: '#999', textAlign: 'center', padding: '20px' }}>No collections yet</p>
-      ) : (
-        collections.map(collection => (
-          <div
-            key={collection.id}
-            onClick={() => onSelect(collection)}
-            style={{
-              padding: '12px',
-              marginBottom: '5px',
-              backgroundColor: selectedId === collection.id ? '#e6f0ff' : '#fff',
-              border: selectedId === collection.id ? '2px solid #0066cc' : '1px solid #ddd',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-            }}
-          >
-            <div style={{ flex: 1, overflow: 'hidden' }}>
-              {editingId === collection.id ? (
-                <input
-                  autoFocus
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  onBlur={() => {
-                    if (editName.trim() && editName.trim() !== collection.name) {
-                      onRename(collection.id, editName.trim())
-                    }
-                    setEditingId(null)
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      if (editName.trim() && editName.trim() !== collection.name) {
-                        onRename(collection.id, editName.trim())
-                      }
-                      setEditingId(null)
-                    }
-                    if (e.key === 'Escape') setEditingId(null)
-                  }}
-                  onClick={(e) => e.stopPropagation()}
-                  style={{
-                    fontWeight: 'bold',
-                    marginBottom: '4px',
-                    border: '1px solid #0066cc',
-                    borderRadius: '2px',
-                    padding: '2px 4px',
-                    fontSize: 'inherit',
-                    width: '100%',
-                    outline: 'none',
-                  }}
-                />
-              ) : (
+              <div className="flex-1 overflow-hidden min-w-0">
                 <div
-                  style={{ fontWeight: 'bold', marginBottom: '4px', cursor: 'text' }}
+                  className="font-semibold mb-1 cursor-text"
                   onDoubleClick={(e) => {
                     e.stopPropagation()
-                    setEditingId(collection.id)
-                    setEditName(collection.name)
+                    openRenameDialog(collection)
                   }}
                   title="Double-click to rename"
                 >
                   {collection.name}
                 </div>
-              )}
-              {collection.description && (
-                <div style={{ fontSize: '12px', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {collection.description}
-                </div>
-              )}
+                {collection.description && (
+                  <div className="text-sm text-muted-foreground overflow-hidden text-ellipsis whitespace-nowrap">
+                    {collection.description}
+                  </div>
+                )}
+              </div>
+              <div className="flex gap-1 shrink-0">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    openRenameDialog(collection)
+                  }}
+                  title="Rename"
+                >
+                  <Pencil className="h-4 w-4" />
+                </Button>
+                <AlertDialog open={deleteOpen && deletingId === collection.id} onOpenChange={setDeleteOpen}>
+                  <AlertDialogTrigger>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        openDeleteDialog(collection.id)
+                      }}
+                      title="Delete"
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete Collection</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Are you sure you want to delete "{collection.name}"? This action cannot be undone.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteConfirm}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
             </div>
-            <button
-              onClick={(e) => { e.stopPropagation(); onDelete(collection.id) }}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: '#dc3545',
-                fontSize: '18px',
-                padding: '0 5px',
-              }}
-            >
-              ×
-            </button>
-          </div>
-        ))
-      )}
-    </div>
+          ))
+        )}
+
+        <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Rename Collection</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleRenameSubmit}>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="rename-name">New Name</Label>
+                  <Input
+                    id="rename-name"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="Collection name"
+                    autoFocus
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button type="button" variant="outline" onClick={() => setEditingId(null)}>
+                    Cancel
+                  </Button>
+                </DialogClose>
+                <Button type="submit">Rename</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </ScrollArea>
   )
 }

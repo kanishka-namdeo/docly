@@ -1,6 +1,24 @@
 import { useState, useEffect } from 'react'
 import { ProviderConfig } from '../../types'
 import { settingsApi } from '../../services/api'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import { toast } from 'sonner'
+import { Pencil, X, Star } from 'lucide-react'
 
 const BUILTIN_PROVIDERS = [
   { value: 'anthropic', label: 'Anthropic (Claude)' },
@@ -45,6 +63,7 @@ export default function ModelConfig() {
           api_key: formData.api_key_ref || undefined,
         })
         setProviders(providers.map(p => p.id === editingProviderId ? updatedProvider : p))
+        toast.success('Provider updated successfully')
       } else {
         // Create new provider
         const newProvider = await settingsApi.createProvider({
@@ -56,6 +75,7 @@ export default function ModelConfig() {
           api_key_ref: formData.api_key_ref || undefined,
         })
         setProviders([...providers, newProvider])
+        toast.success('Provider added successfully')
       }
       setShowForm(false)
       setEditingProviderId(null)
@@ -67,9 +87,10 @@ export default function ModelConfig() {
         base_url: '',
         api_key_ref: '',
       })
+      setTestResult(null)
     } catch (err) {
       console.error('Failed to save provider:', err)
-      alert('Failed to save provider')
+      toast.error('Failed to save provider')
     }
   }
 
@@ -91,8 +112,10 @@ export default function ModelConfig() {
     try {
       await settingsApi.deleteProvider(id)
       setProviders(providers.filter(p => p.id !== id))
+      toast.success('Provider deleted')
     } catch (err) {
       console.error('Failed to delete provider:', err)
+      toast.error('Failed to delete provider')
     }
   }
 
@@ -101,8 +124,10 @@ export default function ModelConfig() {
       await settingsApi.setDefaultProvider(id)
       const updatedProviders = await settingsApi.listProviders()
       setProviders(updatedProviders)
+      toast.success('Default provider updated')
     } catch (err) {
       console.error('Failed to set default provider:', err)
+      toast.error('Failed to set default provider')
     }
   }
 
@@ -119,230 +144,208 @@ export default function ModelConfig() {
         api_key: formData.api_key_ref || undefined,
       })
       setTestResult(result)
+      if (result.success) {
+        toast.success('Connection test successful!')
+      } else {
+        toast.error(`Connection failed: ${result.error}`)
+      }
     } catch (err) {
       setTestResult({ success: false, error: err instanceof Error ? err.message : 'Unknown error' })
+      toast.error('Connection test failed')
     } finally {
       setTestingConnection(false)
     }
   }
 
-  if (loading) return <div>Loading...</div>
+  if (loading) return <div className="p-4 text-center text-muted-foreground">Loading...</div>
 
   return (
-    <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '20px', overflow: 'hidden' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-        <h2 style={{ margin: 0 }}>Model Configuration</h2>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          style={{
-            padding: '8px 16px',
-            backgroundColor: '#0066cc',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between pb-4">
+        <CardTitle className="text-xl font-semibold">Model Configuration</CardTitle>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            setShowForm(!showForm)
+            if (showForm) {
+              setEditingProviderId(null)
+              setFormData({
+                name: '',
+                type: 'builtin',
+                provider_name: 'anthropic',
+                model: 'claude-sonnet-4-20250514',
+                base_url: '',
+                api_key_ref: '',
+              })
+              setTestResult(null)
+            }
           }}
         >
           {showForm ? 'Cancel' : '+ Add Provider'}
-        </button>
-      </div>
-
-      {showForm && (
-        <form onSubmit={handleSubmit} style={{ marginBottom: '20px', padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '4px' }}>
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Name</label>
-            <input
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="My Claude Config"
-              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-              required
-            />
-          </div>
-
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Type</label>
-            <select
-              value={formData.type}
-              onChange={(e) => setFormData({ ...formData, type: e.target.value as 'builtin' | 'custom' })}
-              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-            >
-              <option value="builtin">Builtin</option>
-              <option value="custom">Custom (OpenAI-compatible)</option>
-            </select>
-          </div>
-
-          {formData.type === 'builtin' ? (
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Provider</label>
-              <select
-                value={formData.provider_name}
-                onChange={(e) => setFormData({ ...formData, provider_name: e.target.value })}
-                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-              >
-                {BUILTIN_PROVIDERS.map(p => (
-                  <option key={p.value} value={p.value}>{p.label}</option>
-                ))}
-              </select>
-            </div>
-          ) : (
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Base URL</label>
-              <input
-                type="url"
-                value={formData.base_url}
-                onChange={(e) => setFormData({ ...formData, base_url: e.target.value })}
-                placeholder="https://api.example.com/v1"
-                style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {showForm && (
+          <form onSubmit={handleSubmit} className="mb-6 p-4 bg-muted rounded-md space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="My Claude Config"
                 required
               />
             </div>
-          )}
 
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>Model</label>
-            <input
-              type="text"
-              value={formData.model}
-              onChange={(e) => setFormData({ ...formData, model: e.target.value })}
-              placeholder="claude-sonnet-4-20250514"
-              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-              required
-            />
-          </div>
-
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{ display: 'block', marginBottom: '5px', fontWeight: 'bold' }}>API Key (optional)</label>
-            <input
-              type="password"
-              value={formData.api_key_ref}
-              onChange={(e) => setFormData({ ...formData, api_key_ref: e.target.value })}
-              placeholder="sk-..."
-              style={{ width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px' }}
-            />
-          </div>
-
-          {testResult && (
-            <div style={{
-              padding: '10px',
-              marginBottom: '12px',
-              backgroundColor: testResult.success ? '#d4edda' : '#f8d7da',
-              color: testResult.success ? '#155724' : '#721c24',
-              border: `1px solid ${testResult.success ? '#c3e6cb' : '#f5c6cb'}`,
-              borderRadius: '4px',
-            }}>
-              {testResult.success ? '✓ Connection successful!' : `✗ Connection failed: ${testResult.error}`}
+            <div className="space-y-2">
+              <Label htmlFor="type">Type</Label>
+              <Select
+                value={formData.type}
+                onValueChange={(value) => setFormData({ ...formData, type: value as 'builtin' | 'custom' })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="builtin">Builtin</SelectItem>
+                  <SelectItem value="custom">Custom (OpenAI-compatible)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          )}
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button
-              type="button"
-              onClick={handleTestConnection}
-              disabled={testingConnection}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: testingConnection ? '#6c757d' : '#28a745',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: testingConnection ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {testingConnection ? 'Testing...' : 'Test Connection'}
-            </button>
-          </div>
 
-          <button
-            type="submit"
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#0066cc',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
-          >
-            {editingProviderId ? 'Update Provider' : 'Add Provider'}
-          </button>
-        </form>
-      )}
+            {formData.type === 'builtin' ? (
+              <div className="space-y-2">
+                <Label htmlFor="provider">Provider</Label>
+                <Select
+                  value={formData.provider_name}
+                  onValueChange={(value) => setFormData({ ...formData, provider_name: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select provider" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BUILTIN_PROVIDERS.map(p => (
+                      <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="base_url">Base URL</Label>
+                <Input
+                  id="base_url"
+                  type="url"
+                  value={formData.base_url}
+                  onChange={(e) => setFormData({ ...formData, base_url: e.target.value })}
+                  placeholder="https://api.example.com/v1"
+                  required
+                />
+              </div>
+            )}
 
-      {providers.length === 0 ? (
-        <p style={{ color: '#999', textAlign: 'center', padding: '20px' }}>
-          No provider configurations. Add one to get started.
-        </p>
-      ) : (
-        <div>
-          {providers.map(provider => (
-            <div
-              key={provider.id}
-              style={{
-                padding: '15px',
-                border: '1px solid #ddd',
-                borderRadius: '4px',
-                marginBottom: '10px',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <div>
-                <div style={{ fontWeight: 'bold' }}>{provider.name}</div>
-                <div style={{ fontSize: '13px', color: '#666' }}>
-                  {provider.provider_name} — {provider.model}
-                  {provider.base_url && ` (${provider.base_url})`}
+            <div className="space-y-2">
+              <Label htmlFor="model">Model</Label>
+              <Input
+                id="model"
+                type="text"
+                value={formData.model}
+                onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                placeholder="claude-sonnet-4-20250514"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="api_key">API Key (optional)</Label>
+              <Input
+                id="api_key"
+                type="password"
+                value={formData.api_key_ref}
+                onChange={(e) => setFormData({ ...formData, api_key_ref: e.target.value })}
+                placeholder="sk-..."
+              />
+            </div>
+
+            {testResult && (
+              <div className={`p-2 mb-2 rounded border ${
+                testResult.success
+                  ? 'bg-green-100 border-green-400 text-green-800 dark:bg-green-900 dark:border-green-700 dark:text-green-200'
+                  : 'bg-red-100 border-red-400 text-red-800 dark:bg-red-900 dark:border-red-700 dark:text-red-200'
+              }`}>
+                {testResult.success ? '✓ Connection successful!' : `✗ Connection failed: ${testResult.error}`}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={testResult?.success ? "default" : "secondary"}
+                onClick={handleTestConnection}
+                disabled={testingConnection}
+              >
+                {testingConnection ? 'Testing...' : 'Test Connection'}
+              </Button>
+            </div>
+
+            <Button type="submit">
+              {editingProviderId ? 'Update Provider' : 'Add Provider'}
+            </Button>
+          </form>
+        )}
+
+        {providers.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">
+            No provider configurations. Add one to get started.
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {providers.map(provider => (
+              <div
+                key={provider.id}
+                className="p-4 border rounded-md flex justify-between items-center"
+              >
+                <div className="flex-1">
+                  <div className="font-semibold">{provider.name}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {provider.provider_name} — {provider.model}
+                    {provider.base_url && ` (${provider.base_url})`}
+                  </div>
                 </div>
-                <button
-                  onClick={() => handleSetDefault(provider.id)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: provider.is_default ? '#ffc107' : '#ccc',
-                    fontSize: '18px',
-                    padding: '5px',
-                  }}
-                  title={provider.is_default ? 'Default provider' : 'Set as default'}
-                >
-                  ★
-                </button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleSetDefault(provider.id)}
+                    title={provider.is_default ? 'Default provider' : 'Set as default'}
+                    className={provider.is_default ? 'text-yellow-500 hover:text-yellow-600' : 'text-muted-foreground'}
+                  >
+                    <Star className="h-4 w-4" fill={provider.is_default ? 'currentColor' : 'none'} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleEdit(provider)}
+                    title="Edit provider"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDelete(provider.id)}
+                    title="Delete provider"
+                    className="text-destructive hover:text-destructive"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: '5px' }}>
-                <button
-                  onClick={() => handleEdit(provider)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: '#0066cc',
-                    fontSize: '18px',
-                    padding: '5px',
-                  }}
-                  title="Edit provider"
-                >
-                  ✎
-                </button>
-                <button
-                  onClick={() => handleDelete(provider.id)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    color: '#dc3545',
-                    fontSize: '18px',
-                    padding: '5px',
-                  }}
-                  title="Delete provider"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }

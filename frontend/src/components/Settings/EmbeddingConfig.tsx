@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react'
 import { LMStudioStatus } from '../../types'
 import { settingsApi } from '../../services/api'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { toast } from 'sonner'
 
 export default function EmbeddingConfig() {
   const [status, setStatus] = useState<LMStudioStatus | null>(null)
@@ -17,6 +22,7 @@ export default function EmbeddingConfig() {
       }
     } catch (err) {
       console.error('Failed to check LM Studio status:', err)
+      toast.error('Failed to check LM Studio status')
       setStatus({ connected: false, url: 'http://localhost:1234', model: null, models: null, error: null })
     } finally {
       setLoading(false)
@@ -28,9 +34,10 @@ export default function EmbeddingConfig() {
       await settingsApi.setEmbeddingModel(model)
       setSelectedModel(model)
       setStatus(prev => prev ? { ...prev, model } : null)
+      toast.success('Embedding model updated')
     } catch (err) {
       console.error('Failed to set embedding model:', err)
-      alert('Failed to change embedding model')
+      toast.error('Failed to change embedding model')
     }
   }
 
@@ -39,85 +46,72 @@ export default function EmbeddingConfig() {
   }, [])
 
   return (
-    <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '20px' }}>
-      <h2 style={{ margin: '0 0 20px' }}>Embedding Configuration</h2>
-
-      <div style={{ marginBottom: '20px' }}>
-        <h3 style={{ fontSize: '16px', marginBottom: '10px' }}>LM Studio Setup</h3>
-        <p style={{ color: '#666', fontSize: '14px', lineHeight: '1.6' }}>
-          The embedding model runs locally via <strong>LM Studio</strong>. Follow these steps to set it up:
-        </p>
-        <ol style={{ fontSize: '14px', color: '#333', lineHeight: '1.8' }}>
-          <li>Download and install <a href="https://lmstudio.ai" target="_blank" rel="noopener noreferrer">LM Studio</a></li>
-          <li>Download an embedding model (e.g., <code>nomic-embed-text</code> or <code>mxbai-embed-large</code>)</li>
-          <li>Start the local inference server (default: <code>http://localhost:1234</code>)</li>
-          <li>Load your embedding model in LM Studio</li>
-        </ol>
-      </div>
-
-      <div style={{ padding: '15px', backgroundColor: '#f9f9f9', borderRadius: '4px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <span style={{ fontWeight: 'bold' }}>Connection Status</span>
-          <button
-            onClick={checkStatus}
-            disabled={loading}
-            style={{
-              padding: '6px 12px',
-              backgroundColor: loading ? '#ccc' : '#0066cc',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              fontSize: '13px',
-            }}
-          >
-            {loading ? 'Checking...' : 'Refresh'}
-          </button>
+    <Card>
+      <CardHeader>
+        <CardTitle>Embedding Configuration</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-3">
+          <h3 className="text-base font-semibold">LM Studio Setup</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            The embedding model runs locally via <strong>LM Studio</strong>. Follow these steps to set it up:
+          </p>
+          <ol className="text-sm text-foreground space-y-1 list-decimal list-inside">
+            <li>Download and install <a href="https://lmstudio.ai" target="_blank" rel="noopener noreferrer" className="text-primary underline">LM Studio</a></li>
+            <li>Download an embedding model (e.g., <code className="bg-muted px-1 rounded">nomic-embed-text</code> or <code className="bg-muted px-1 rounded">mxbai-embed-large</code>)</li>
+            <li>Start the local inference server (default: <code className="bg-muted px-1 rounded">http://localhost:1234</code>)</li>
+            <li>Load your embedding model in LM Studio</li>
+          </ol>
         </div>
 
-        {status ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span
-              style={{
-                display: 'inline-block',
-                width: '12px',
-                height: '12px',
-                borderRadius: '50%',
-                backgroundColor: status.connected ? '#28a745' : '#dc3545',
-              }}
-            />
-            <span style={{ color: status.connected ? '#28a745' : '#dc3545' }}>
-              {status.connected ? 'Connected' : 'Not Connected'}
-            </span>
-            {status.connected && status.models && status.models.length > 0 && (
-              <div style={{ marginTop: '10px' }}>
-                <label style={{ display: 'block', fontSize: '13px', marginBottom: '5px', color: '#666' }}>
-                  Embedding Model:
-                </label>
-                <select
-                  value={selectedModel}
-                  onChange={(e) => handleModelChange(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '6px',
-                    borderRadius: '4px',
-                    border: '1px solid #ccc',
-                    fontSize: '13px',
-                  }}
-                >
-                  {status.models.map((model) => (
-                    <option key={model} value={model}>
-                      {model}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+        <div className="rounded-lg bg-muted p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="font-semibold text-sm">Connection Status</span>
+            <Button
+              onClick={checkStatus}
+              disabled={loading}
+              variant={loading ? "secondary" : "default"}
+              size="sm"
+            >
+              {loading ? 'Checking...' : 'Refresh'}
+            </Button>
           </div>
-        ) : (
-          <span style={{ color: '#999' }}>Checking...</span>
-        )}
-      </div>
-    </div>
+
+          {status ? (
+            <div className="flex items-center gap-2.5">
+              <span
+                className={`inline-block w-3 h-3 rounded-full ${
+                  status.connected ? 'bg-green-500' : 'bg-red-500'
+                }`}
+              />
+              <span className={status.connected ? 'text-green-600 dark:text-green-400 text-sm' : 'text-red-600 dark:text-red-400 text-sm'}>
+                {status.connected ? 'Connected' : 'Not Connected'}
+              </span>
+              {status.connected && status.models && status.models.length > 0 && (
+                <div className="mt-2 w-full">
+                  <Label htmlFor="embedding-model" className="text-xs text-muted-foreground mb-1.5 block">
+                    Embedding Model
+                  </Label>
+                  <Select value={selectedModel} onValueChange={handleModelChange}>
+                    <SelectTrigger id="embedding-model" className="w-full">
+                      <SelectValue placeholder="Select a model" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {status.models.map((model) => (
+                        <SelectItem key={model} value={model}>
+                          {model}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          ) : (
+            <span className="text-sm text-muted-foreground">Checking...</span>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   )
 }

@@ -1,4 +1,5 @@
 import { Component, ReactNode } from 'react'
+import { Button } from '@/components/ui/button'
 
 interface Props {
   children: ReactNode
@@ -22,29 +23,19 @@ export default class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('ErrorBoundary caught:', error, errorInfo)
   }
-
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: '40px', textAlign: 'center', maxWidth: '600px', margin: '0 auto' }}>
-          <h2 style={{ color: '#dc3545', marginBottom: '16px' }}>Something went wrong</h2>
-          <p style={{ color: '#666', marginBottom: '20px' }}>
+        <div className="flex flex-col items-center justify-center p-10 max-w-[600px] mx-auto text-center">
+          <h2 className="text-destructive mb-4 text-lg font-semibold">Something went wrong</h2>
+          <p className="text-muted-foreground mb-5">
             {this.state.error?.message || 'An unexpected error occurred'}
           </p>
-          <button
+          <Button
             onClick={() => { this.setState({ hasError: false, error: null }); window.location.reload() }}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: '#0066cc',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '14px',
-            }}
           >
             Reload App
-          </button>
+          </Button>
         </div>
       )
     }

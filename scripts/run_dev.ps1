@@ -8,7 +8,7 @@ Write-Host "Starting Doc Assistant Development Environment" -ForegroundColor Cya
 Write-Host "=========================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Function to start a service
+# Function to start a service in a new PowerShell window
 function Start-Service {
     param(
         [string]$Name,
@@ -20,20 +20,21 @@ function Start-Service {
     Write-Host "Starting $Name..." -ForegroundColor Yellow
     
     # Check if port is already in use
-    $process = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue
-    if ($process) {
-        Write-Host "$Name already running on port $Port (PID: $($process.OwningProcess))" -ForegroundColor Green
-        return
+    $existing = Get-NetTCPConnection -LocalPort $Port -ErrorAction SilentlyContinue
+    if ($existing) {
+        Write-Host "$Name already running on port $Port (PID: $($existing.OwningProcess))" -ForegroundColor Green
+        return $null
     }
     
-    # Start the service
+    # Start the service in a new PowerShell window
     $processInfo = New-Object System.Diagnostics.ProcessStartInfo
-    $processInfo.FileName = "cmd.exe"
-    $processInfo.Arguments = "/c $Command"
-    $processInfo.RedirectStandardOutput = $true
-    $processInfo.RedirectStandardError = $true
-    $processInfo.UseShellExecute = $false
-    $processInfo.CreateNoWindow = $true
+    $processInfo.FileName = "powershell.exe"
+    $processInfo.Arguments = "-NoExit -Command `"$Command`""
+    $processInfo.WorkingDirectory = $PSScriptRoot | Split-Path -Parent
+    $processInfo.RedirectStandardOutput = $false
+    $processInfo.RedirectStandardError = $false
+    $processInfo.UseShellExecute = $true
+    $processInfo.CreateNoWindow = $false
     
     $process = New-Object System.Diagnostics.Process
     $process.StartInfo = $processInfo
@@ -42,8 +43,24 @@ function Start-Service {
     # Wait for service to start
     Start-Sleep -Seconds $WaitSeconds
     
-    Write-Host "$Name started successfully" -ForegroundColor Green
+    Write-Host "$Name started successfully (PID: $($process.Id))" -ForegroundColor Green
     return $process
+}
+
+# Function to kill a process and all its children
+function Stop-ProcessTree($process) {
+    if ($process -and !$process.HasExited) {
+        try {
+            # Kill child processes first
+            $children = Get-WmiObject Win32_Process | Where-Object { $_.ParentProcessId -eq $process.Id }
+            foreach ($child in $children) {
+                Stop-Process -Id $child.ProcessId -Force -ErrorAction SilentlyContinue
+            }
+            $process.Kill()
+        } catch {
+            # Process may have already exited
+        }
+    }
 }
 
 # Check prerequisites
@@ -83,21 +100,48 @@ Write-Host "Step 2/3: Starting Frontend Dev Server" -ForegroundColor Cyan
 Write-Host "-----------------------------------------" -ForegroundColor Cyan
 $frontendProcess = Start-Service -Name "Frontend" -Command "cd frontend; npm run dev" -Port 1420 -WaitSeconds 5
 
+# Wait for frontend to be ready
+Write-Host "Waiting for frontend to be ready..." -ForegroundColor Yellow
+$frontendReady = $false
+for ($i = 0; $i -lt 30; $i++) {
+    try {
+        $response = Invoke-WebRequest -Uri "http://localhost:1420" -TimeoutSec 1 -ErrorAction Stop
+        if ($response.StatusCode -eq 200) {
+            Write-Host "[OK] Frontend ready" -ForegroundColor Green
+            $frontendReady = $true
+            break
+        }
+    } catch {
+        Start-Sleep -Seconds 1
+    }
+}
+
+if (-not $frontendReady) {
+    Write-Host "ERROR: Frontend failed to start within 30 seconds" -ForegroundColor Red
+    exit 1
+}
+
 # Start Tauri Desktop App (if Rust is available)
 if ($TAURI_ENABLED) {
     Write-Host ""
     Write-Host "Step 3/3: Starting Tauri Desktop App" -ForegroundColor Cyan
     Write-Host "-----------------------------------------" -ForegroundColor Cyan
     
-    # Check if frontend is built
-    if (-not (Test-Path "frontend/dist")) {
-        Write-Host "Building frontend for Tauri..." -ForegroundColor Yellow
-        Push-Location frontend
-        npm run build
-        Pop-Location
-    }
+    # Tauri doesn't listen on a port - launch directly
+    Write-Host "Starting Tauri..." -ForegroundColor Yellow
     
-    $tauriProcess = Start-Service -Name "Tauri" -Command "cd src-tauri; cargo tauri dev" -Port 1420 -WaitSeconds 10
+    $tauriProcessInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $tauriProcessInfo.FileName = "powershell.exe"
+    $tauriProcessInfo.Arguments = "-NoExit -Command `"cd src-tauri; cargo tauri dev`""
+    $tauriProcessInfo.WorkingDirectory = $PSScriptRoot | Split-Path -Parent
+    $tauriProcessInfo.UseShellExecute = $true
+    $tauriProcessInfo.RedirectStandardOutput = $false
+    $tauriProcessInfo.RedirectStandardError = $false
+    $tauriProcessInfo.CreateNoWindow = $false
+    
+    $tauriProcess = [System.Diagnostics.Process]::Start($tauriProcessInfo)
+    
+    Write-Host "Tauri started successfully (PID: $($tauriProcess.Id))" -ForegroundColor Green
 } else {
     Write-Host ""
     Write-Host "Step 3/3: Tauri Desktop App (Skipped - Rust not installed)" -ForegroundColor Gray
@@ -128,10 +172,9 @@ catch {
     Write-Host ""
     Write-Host "Shutting down services..." -ForegroundColor Yellow
     
-    # Stop processes
-    if ($backendProcess) { $backendProcess.Kill() }
-    if ($frontendProcess) { $frontendProcess.Kill() }
-    if ($tauriProcess) { $tauriProcess.Kill() }
+    # Stop process trees
+    if ($backendProcess) { Stop-ProcessTree $backendProcess }
+    if ($tauriProcess) { Stop-ProcessTree $tauriProcess }
     
     Write-Host "All services stopped." -ForegroundColor Green
 }

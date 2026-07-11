@@ -58,10 +58,18 @@ async def send_chat_message(
 
     # Get LLM provider config
     provider_repo = ProviderConfigRepository(session)
-    provider_configs = await provider_repo.get_all()
 
-    if provider_configs:
-        config = provider_configs[0]
+    if body.provider_config_id:
+        # Use the provider explicitly selected by the frontend
+        config = await provider_repo.get_by_id(body.provider_config_id)
+        if not config:
+            raise HTTPException(status_code=400, detail=f"Provider config '{body.provider_config_id}' not found")
+    else:
+        # Fall back to the default provider, or the first one if no default is set
+        all_configs = await provider_repo.get_all()
+        config = next((c for c in all_configs if c.is_default), all_configs[0] if all_configs else None)
+
+    if config:
         provider_dict = {
             "type": config.type,
             "api_key": config.api_key_ref,

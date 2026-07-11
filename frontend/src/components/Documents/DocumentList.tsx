@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { Collection, Document } from '../../types'
 import { documentsApi } from '../../services/api'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { toast } from 'sonner'
 
 interface DocumentListProps {
   collection: Collection
@@ -16,9 +19,13 @@ export default function DocumentList({ collection }: DocumentListProps) {
     setLoading(true)
     documentsApi.list(collection.id)
       .then(setDocuments)
-      .catch(err => console.error('Failed to load documents:', err))
+      .catch(err => {
+        console.error('Failed to load documents:', err)
+        toast.error('Failed to load documents')
+      })
       .finally(() => setLoading(false))
   }, [collection.id])
+
   // Poll for status updates when documents are pending
   useEffect(() => {
     const hasPending = documents.some(d => d.status === 'pending')
@@ -36,7 +43,6 @@ export default function DocumentList({ collection }: DocumentListProps) {
     return () => clearInterval(interval)
   }, [collection.id, documents.some(d => d.status === 'pending')])
 
-
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -45,9 +51,10 @@ export default function DocumentList({ collection }: DocumentListProps) {
     try {
       const doc: Document = await documentsApi.upload(collection.id, file)
       setDocuments([doc, ...documents])
+      toast.success('Document uploaded successfully')
     } catch (err) {
       console.error('Upload failed:', err)
-      alert(`Upload failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      toast.error(`Upload failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
     } finally {
       setUploading(false)
       if (fileInputRef.current) {
@@ -61,17 +68,19 @@ export default function DocumentList({ collection }: DocumentListProps) {
     try {
       await documentsApi.delete(id)
       setDocuments(documents.filter(d => d.id !== id))
+      toast.success('Document deleted')
     } catch (err) {
       console.error('Delete failed:', err)
+      toast.error('Failed to delete document')
     }
   }
 
-  const getStatusColor = (status: string) => {
+  const getStatusBadgeVariant = (status: string): 'default' | 'secondary' | 'destructive' | 'outline' => {
     switch (status) {
-      case 'indexed': return '#28a745'
-      case 'pending': return '#ffc107'
-      case 'error': return '#dc3545'
-      default: return '#6c757d'
+      case 'indexed': return 'default'
+      case 'pending': return 'secondary'
+      case 'error': return 'destructive'
+      default: return 'outline'
     }
   }
 
@@ -82,107 +91,82 @@ export default function DocumentList({ collection }: DocumentListProps) {
   }
 
   return (
-    <div style={{ padding: '20px', height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexShrink: 0, gap: '15px', flexWrap: 'wrap' }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <h2 style={{ margin: 0, fontSize: '18px' }}>{collection.name}</h2>
+    <div className="flex flex-col h-full p-5 min-h-0">
+      <div className="flex items-start justify-between mb-5 shrink-0 gap-4 flex-wrap">
+        <div className="flex-1 min-w-0">
+          <h2 className="text-lg font-semibold m-0">{collection.name}</h2>
           {collection.description && (
-            <p style={{ margin: '5px 0 0', color: '#666', fontSize: '14px' }}>{collection.description}</p>
+            <p className="text-sm text-muted-foreground mt-1 mb-0">{collection.description}</p>
           )}
         </div>
-        <div style={{ flexShrink: 0 }}>
-        <div>
+        <div className="shrink-0">
           <input
             ref={fileInputRef}
             type="file"
             onChange={handleFileSelect}
-            style={{ display: 'none' }}
+            className="hidden"
           />
-          <button
+          <Button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: uploading ? '#ccc' : '#28a745',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: uploading ? 'not-allowed' : 'pointer',
-            }}
           >
             {uploading ? 'Uploading...' : 'Upload Document'}
-          </button>
-        </div>
+          </Button>
         </div>
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '40px' }}>Loading documents...</div>
+        <div className="text-center py-10">Loading documents...</div>
       ) : documents.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '40px', color: '#999' }}>
-          <p>No documents in this collection</p>
-          <p style={{ fontSize: '14px' }}>Upload a document to get started</p>
+        <div className="text-center py-10 text-muted-foreground">
+          <p className="mb-2">No documents in this collection</p>
+          <p className="text-sm">Upload a document to get started</p>
         </div>
       ) : (
-        <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
-          <table style={{ width: '100%', minWidth: '600px', borderCollapse: 'collapse' }}>
+        <div className="flex-1 overflow-auto min-h-0">
+          <table className="w-full min-w-[600px]">
             <thead>
-              <tr style={{ backgroundColor: '#f5f5f5', borderBottom: '2px solid #ddd' }}>
-                <th style={{ padding: '12px', textAlign: 'left' }}>File Name</th>
-                <th style={{ padding: '12px', textAlign: 'left' }}>Type</th>
-                <th style={{ padding: '12px', textAlign: 'left' }}>Size</th>
-                <th style={{ padding: '12px', textAlign: 'left' }}>Status</th>
-                <th style={{ padding: '12px', textAlign: 'left' }}>Updated</th>
-                <th style={{ padding: '12px', textAlign: 'left' }}></th>
+              <tr className="bg-muted border-b-2 border-border">
+                <th className="p-3 text-left font-medium">File Name</th>
+                <th className="p-3 text-left font-medium">Type</th>
+                <th className="p-3 text-left font-medium">Size</th>
+                <th className="p-3 text-left font-medium">Status</th>
+                <th className="p-3 text-left font-medium">Updated</th>
+                <th className="p-3"></th>
               </tr>
             </thead>
             <tbody>
               {documents.map(doc => (
-                <tr key={doc.id} style={{ borderBottom: '1px solid #eee' }}>
-                  <td style={{ padding: '12px' }}>
-                    <div style={{ maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                <tr key={doc.id} className="border-b border-border">
+                  <td className="p-3">
+                    <div className="max-w-[250px] overflow-hidden text-ellipsis whitespace-nowrap">
                       {doc.file_path.split('/').pop() || doc.file_path}
                     </div>
                   </td>
-                  <td style={{ padding: '12px', color: '#666' }}>{doc.file_type}</td>
-                  <td style={{ padding: '12px', color: '#666' }}>{formatFileSize(doc.file_size)}</td>
-                  <td style={{ padding: '12px' }}>
-                    <span
-                      style={{
-                        display: 'inline-block',
-                        padding: '4px 8px',
-                        borderRadius: '12px',
-                        backgroundColor: getStatusColor(doc.status),
-                        color: 'white',
-                        fontSize: '12px',
-                        textTransform: 'capitalize',
-                      }}
-                    >
+                  <td className="p-3 text-muted-foreground">{doc.file_type}</td>
+                  <td className="p-3 text-muted-foreground">{formatFileSize(doc.file_size)}</td>
+                  <td className="p-3">
+                    <Badge variant={getStatusBadgeVariant(doc.status)} className="capitalize">
                       {doc.status}
-                    </span>
+                    </Badge>
                     {doc.status === 'error' && doc.error_message && (
-                      <div style={{ fontSize: '11px', color: '#dc3545', marginTop: '4px' }}>
+                      <div className="text-xs text-destructive mt-1">
                         {doc.error_message}
                       </div>
                     )}
                   </td>
-                  <td style={{ padding: '12px', color: '#666', fontSize: '12px' }}>
+                  <td className="p-3 text-muted-foreground text-xs">
                     {doc.updated_at ? new Date(doc.updated_at).toLocaleDateString() : '-'}
                   </td>
-                  <td style={{ padding: '12px', textAlign: 'right' }}>
-                    <button
+                  <td className="p-3 text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => handleDelete(doc.id)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        cursor: 'pointer',
-                        color: '#dc3545',
-                        padding: '5px',
-                        fontSize: '16px',
-                      }}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
                     >
                       🗑️
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))}

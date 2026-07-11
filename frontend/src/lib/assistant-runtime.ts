@@ -51,6 +51,8 @@ function createChatModelAdapter(ctx: AdapterContext): ChatModelAdapter {
             citations: data.citations as Citation[],
             messageId: data.message_id,
             conversationId: data.conversation_id,
+            reasoning: data.reasoning,
+            iterations: data.iterations,
           },
         },
       };

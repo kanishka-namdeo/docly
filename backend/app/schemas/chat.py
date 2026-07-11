@@ -14,6 +14,7 @@ class ChatRequest(BaseModel):
     message: str
     conversation_id: Optional[str] = None
     collection_id: Optional[str] = None
+    provider_config_id: Optional[str] = None
     limit: int = 10
 
 

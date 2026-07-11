@@ -52,15 +52,15 @@ export default function Documents() {
   }
 
   if (loading) {
-    return <div style={{ padding: '20px' }}>Loading...</div>
+    return <div className="p-6">Loading...</div>
   }
 
   return (
-    <div style={{ display: 'flex', height: '100%', minHeight: 0 }}>
+    <div className="flex h-full min-h-0">
       {/* Collection Sidebar */}
-      <div style={{ width: '280px', flexShrink: 0, borderRight: '1px solid #ddd', display: 'flex', flexDirection: 'column', height: '100%' }}>
-        <div style={{ padding: '15px', borderBottom: '1px solid #ddd' }}>
-          <h2 style={{ margin: 0, fontSize: '18px' }}>Collections</h2>
+      <div className="w-[280px] flex-shrink-0 border-r border-border flex flex-col h-full">
+        <div className="p-4 border-b border-border">
+          <h2 className="m-0 text-lg font-semibold">Collections</h2>
         </div>
         <CollectionList
           collections={collections}
@@ -73,13 +73,13 @@ export default function Documents() {
       </div>
 
       {/* Document List */}
-      <div style={{ flex: 1, minWidth: 0, overflow: 'auto' }}>
+      <div className="flex-1 min-w-0 overflow-auto">
         {selectedCollection ? (
           <DocumentList collection={selectedCollection} />
         ) : (
-          <div style={{ padding: '40px', textAlign: 'center', color: '#999' }}>
+          <div className="p-8 text-center text-muted-foreground">
             <p>Select a collection to view documents</p>
-            <p style={{ fontSize: '14px', marginTop: '10px' }}>
+            <p className="text-sm mt-2">
               Or create a new collection from the left panel
             </p>
           </div>

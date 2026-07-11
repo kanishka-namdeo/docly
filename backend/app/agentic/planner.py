@@ -46,3 +46,49 @@ Respond with JSON:
             }
 
         return result
+
+    async def reformulate(self, original_query: str, feedback: str, context: dict = None) -> str:
+        """
+        Reformulate a query based on retrieval feedback.
+        
+        Args:
+            original_query: The original query that had low confidence
+            feedback: Feedback from the evaluator about why confidence was low
+            context: Optional context about the retrieval attempt
+        
+        Returns:
+            Reformulated query string
+        """
+        system_prompt = """You are a query reformulator. Your job is to improve queries that failed to retrieve good results.
+
+Given the original query and feedback about why it failed, create a better query that is:
+- More specific and focused
+- Uses different terminology if needed
+- Breaks down complex concepts
+- Removes ambiguity
+
+Respond with ONLY the reformulated query, nothing else."""
+
+        user_prompt = f"""Original query: {original_query}
+
+Feedback: {feedback}
+
+{f'Context: {context}' if context else ''}
+
+Reformulated query:"""
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ]
+
+        response = await self.llm.chat(messages, temperature=0.5)
+        
+        # Clean up response
+        reformulated = response.strip().strip('"').strip("'")
+        
+        # Fallback to original if reformulation is empty or too short
+        if not reformulated or len(reformulated) < 3:
+            return original_query
+        
+        return reformulated

@@ -23,6 +23,14 @@ class ProviderConfigCreate(BaseModel):
     base_url: str = None
     api_key: str = None
 
+class ProviderConfigUpdate(BaseModel):
+    name: Optional[str] = None
+    type: Optional[str] = None
+    provider_name: Optional[str] = None
+    model: Optional[str] = None
+    base_url: Optional[str] = None
+    api_key: Optional[str] = None
+
 class ProviderConfigResponse(BaseModel):
     id: str
     name: str

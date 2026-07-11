@@ -24,3 +24,11 @@ class DocumentUploadResponse(BaseModel):
     file_name: str
     status: str
     message: str
+
+
+
+class BatchUploadResult(BaseModel):
+    file_name: str
+    status: str
+    document_id: Optional[str] = None
+    message: Optional[str] = None

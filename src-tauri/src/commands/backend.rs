@@ -47,3 +47,8 @@ pub async fn stop_backend(state: tauri::State<'_, BackendState>) -> Result<(), S
 
     Ok(())
 }
+
+#[tauri::command]
+pub fn open_file(path: String) -> Result<(), String> {
+    open::that(&path).map_err(|e| format!("Failed to open file: {}", e))
+}

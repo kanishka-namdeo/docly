@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
 import { settingsApi } from '../../services/api'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 export default function PreferencesConfig() {
   const [theme, setTheme] = useState<string>('system')
@@ -61,54 +64,43 @@ export default function PreferencesConfig() {
   if (loading) return <div>Loading...</div>
 
   return (
-    <div style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '20px' }}>
-      <h2 style={{ margin: '0 0 20px' }}>Preferences</h2>
+    <Card>
+      <CardHeader>
+        <CardTitle>Preferences</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="space-y-2">
+          <Label htmlFor="theme-select">Theme</Label>
+          <Select value={theme} onValueChange={handleThemeChange}>
+            <SelectTrigger id="theme-select">
+              <SelectValue placeholder="Select theme" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="light">Light</SelectItem>
+              <SelectItem value="dark">Dark</SelectItem>
+              <SelectItem value="system">System</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-muted-foreground">
+            Choose how the app looks. System follows your device settings.
+          </p>
+        </div>
 
-      <div style={{ marginBottom: '20px' }}>
-        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-          Theme
-        </label>
-        <select
-          value={theme}
-          onChange={(e) => handleThemeChange(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '8px',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            fontSize: '14px',
-          }}
-        >
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-          <option value="system">System</option>
-        </select>
-        <p style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-          Choose how the app looks. System follows your device settings.
-        </p>
-      </div>
-
-      <div style={{ marginBottom: '20px' }}>
-        <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
-          Language
-        </label>
-        <select
-          value={language}
-          onChange={(e) => handleLanguageChange(e.target.value)}
-          style={{
-            width: '100%',
-            padding: '8px',
-            border: '1px solid #ddd',
-            borderRadius: '4px',
-            fontSize: '14px',
-          }}
-        >
-          <option value="en">English</option>
-        </select>
-        <p style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
-          More languages coming soon.
-        </p>
-      </div>
-    </div>
+        <div className="space-y-2">
+          <Label htmlFor="language-select">Language</Label>
+          <Select value={language} onValueChange={handleLanguageChange}>
+            <SelectTrigger id="language-select">
+              <SelectValue placeholder="Select language" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="en">English</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-sm text-muted-foreground">
+            More languages coming soon.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

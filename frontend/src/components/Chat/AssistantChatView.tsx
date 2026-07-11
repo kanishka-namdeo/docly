@@ -2,41 +2,51 @@ import { ThreadPrimitive, ComposerPrimitive, MessagePrimitive, useMessage, useTh
 import { MarkdownTextPrimitive } from '@assistant-ui/react-markdown';
 import type { Citation } from '../../types';
 import { useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 function CitationCard({ citation, index }: { citation: Citation; index: number }) {
   const [expanded, setExpanded] = useState(false);
 
+  const handleClick = async () => {
+    // Toggle expanded state
+    setExpanded(!expanded);
+    
+    // Also try to open file if clicking on the filename
+    if (citation.file_path && !expanded) {
+      try {
+        await invoke('open_file', { path: citation.file_path });
+      } catch (error) {
+        console.error('Failed to open file:', error);
+      }
+    }
+  };
+
   return (
-    <div
-      style={{
-        border: '1px solid #ddd',
-        borderRadius: '6px',
-        padding: '8px',
-        maxWidth: '200px',
-        backgroundColor: expanded ? '#fff' : '#fafafa',
-        cursor: 'pointer',
-      }}
-      onClick={() => setExpanded(!expanded)}
-    >
-      <div style={{ fontSize: '11px', color: '#666', marginBottom: '4px' }}>
-        [{index}] {citation.file_path.split('/').pop()}
-      </div>
-      {expanded && (
-        <div style={{ fontSize: '12px', color: '#333', marginTop: '4px' }}>
-          <div style={{ marginBottom: '4px', fontStyle: 'italic', color: '#888' }}>
-            Score: {(citation.score * 100).toFixed(1)}%
-          </div>
-          <div style={{ maxHeight: '100px', overflow: 'auto', lineHeight: '1.4' }}>
-            {citation.text}
-          </div>
+    <Card className="cursor-pointer hover:bg-muted/50 transition-colors" onClick={handleClick} title="Click to expand/collapse">
+      <CardContent className="p-3">
+        <div className="text-xs text-muted-foreground mb-1">
+          [{index}] {citation.file_path.split('/').pop()}
         </div>
-      )}
-      {!expanded && (
-        <div style={{ fontSize: '10px', color: '#999' }}>
-          Click to expand
-        </div>
-      )}
-    </div>
+        {expanded && (
+          <div className="text-sm text-foreground mt-1">
+            <div className="mb-1 italic text-muted-foreground">
+              Score: {(citation.score * 100).toFixed(1)}%
+            </div>
+            <div className="max-h-[100px] overflow-auto leading-relaxed">
+              {citation.text}
+            </div>
+          </div>
+        )}
+        {!expanded && (
+          <div className="text-[10px] text-muted-foreground">
+            Click to expand
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -44,22 +54,40 @@ function AssistantMessageContent() {
   const message = useMessage()
   if (!message) return null
   
-  const metadata = message.metadata as { custom?: { citations?: Citation[] } } | undefined
+  const metadata = message.metadata as { 
+    custom?: { 
+      citations?: Citation[];
+      reasoning?: string;
+      iterations?: number;
+    } 
+  } | undefined
   const citations = metadata?.custom?.citations || []
+  const reasoning = metadata?.custom?.reasoning
+  const iterations = metadata?.custom?.iterations
 
   return (
     <div>
+      {reasoning && (
+        <details className="mb-2.5 p-2 bg-muted/30 rounded-md">
+          <summary className="cursor-pointer text-xs text-muted-foreground select-none">
+            🧠 Reasoning {iterations && `(${iterations} iteration${iterations > 1 ? 's' : ''})`}
+          </summary>
+          <div className="mt-2 text-sm leading-relaxed text-muted-foreground whitespace-pre-wrap">
+            {reasoning}
+          </div>
+        </details>
+      )}
       <MessagePrimitive.Content
         components={{
           Text: () => <MarkdownTextPrimitive />,
         }}
       />
       {citations.length > 0 && (
-        <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid rgba(0,0,0,0.1)' }}>
-          <div style={{ fontSize: '12px', marginBottom: '5px', fontWeight: 'bold' }}>
+        <div className="mt-2.5 pt-2.5 border-t border-border">
+          <div className="text-xs mb-1.5 font-semibold">
             Citations ({citations.length})
           </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+          <div className="flex flex-wrap gap-1.5">
             {citations.map((citation, idx) => (
               <CitationCard key={idx} citation={citation} index={idx + 1} />
             ))}
@@ -75,8 +103,8 @@ function TypingIndicator() {
   const isGenerating = thread.isRunning;
   if (!isGenerating) return null;
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', color: '#888', fontSize: '13px' }}>
-      <span style={{ opacity: 0.6 }}>⋯</span>
+    <div className="flex items-center gap-2 px-4 py-2 text-muted-foreground text-sm">
+      <span className="opacity-60">⋯</span>
       Generating response…
     </div>
   );
@@ -85,25 +113,25 @@ function TypingIndicator() {
 
 export default function AssistantChatView() {
   return (
-    <ThreadPrimitive.Root style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
-      <ThreadPrimitive.Viewport style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '20px' }}>
+    <ThreadPrimitive.Root className="flex flex-col h-full min-h-0">
+      <ThreadPrimitive.Viewport className="flex-1 min-h-0 overflow-auto p-5">
         <ThreadPrimitive.Empty>
-          <div style={{ textAlign: 'center', color: '#999', padding: '40px' }}>
+          <div className="text-center text-muted-foreground py-10">
             No messages yet. Start the conversation!
           </div>
         </ThreadPrimitive.Empty>
         <ThreadPrimitive.Messages
           components={{
             UserMessage: () => (
-              <MessagePrimitive.Root style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
-                <div style={{ maxWidth: '80%', padding: '12px 16px', borderRadius: '12px', backgroundColor: '#0066cc', color: 'white' }}>
+              <MessagePrimitive.Root className="flex justify-end mb-3">
+                <div className="max-w-[80%] px-4 py-3 rounded-xl bg-accent text-accent-foreground">
                   <MessagePrimitive.Content />
                 </div>
               </MessagePrimitive.Root>
             ),
             AssistantMessage: () => (
-              <MessagePrimitive.Root style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '12px' }}>
-                <div style={{ maxWidth: '80%', padding: '12px 16px', borderRadius: '12px', backgroundColor: '#f0f0f0', color: '#333' }}>
+              <MessagePrimitive.Root className="flex justify-start mb-3">
+                <div className="max-w-[80%] px-4 py-3 rounded-xl bg-muted text-foreground">
                   <AssistantMessageContent />
                 </div>
               </MessagePrimitive.Root>
@@ -112,33 +140,21 @@ export default function AssistantChatView() {
         />
         <TypingIndicator />
       </ThreadPrimitive.Viewport>
-      <div style={{ padding: '15px 20px', borderTop: '1px solid #ddd', flexShrink: 0 }}>
-        <ComposerPrimitive.Root style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>
+      <div className="px-4 py-3 border-t border-border flex-shrink-0">
+        <ComposerPrimitive.Root className="flex gap-2.5 items-end">
           <ComposerPrimitive.Input
-            style={{
-              flex: 1,
-              padding: '12px',
-              border: '1px solid #ddd',
-              borderRadius: '8px',
-              resize: 'none',
-              fontSize: '14px',
-              fontFamily: 'inherit',
-              outline: 'none',
-            }}
+            className={cn(
+              "flex-1 px-3 py-3 border border-input rounded-md",
+              "resize-none text-sm font-sans outline-none",
+              "focus:ring-2 focus:ring-ring focus:border-transparent",
+              "placeholder:text-muted-foreground"
+            )}
             placeholder="Type your message... (Enter to send, Shift+Enter for new line)"
           />
-          <ComposerPrimitive.Send
-            style={{
-              padding: '12px 24px',
-              backgroundColor: '#0066cc',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontWeight: 'bold',
-            }}
-          >
-            Send
+          <ComposerPrimitive.Send asChild>
+            <Button className="px-6 py-3 font-semibold">
+              Send
+            </Button>
           </ComposerPrimitive.Send>
         </ComposerPrimitive.Root>
       </div>
