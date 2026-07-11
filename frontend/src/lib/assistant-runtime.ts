@@ -8,6 +8,7 @@ const API_BASE = 'http://127.0.0.1:8000';
 interface AdapterContext {
   getConversationId: () => string | undefined;
   getProviderConfigId: () => string | undefined;
+  getCollectionId: () => string | undefined;
 }
 
 function createChatModelAdapter(ctx: AdapterContext): ChatModelAdapter {
@@ -30,11 +31,11 @@ function createChatModelAdapter(ctx: AdapterContext): ChatModelAdapter {
 
       const response = await fetch(`${API_BASE}/chat/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: userText,
           conversation_id: conversationId,
           provider_config_id: providerConfigId,
+          collection_id: ctx.getCollectionId(),
         }),
         signal: abortSignal,
       });
@@ -76,28 +77,32 @@ export function convertBackendMessage(msg: {
     },
   };
 }
-
 interface UseDocAssistantRuntimeOptions {
   conversationId: string | undefined;
   providerConfigId: string | undefined;
+  collectionId: string | undefined;
   initialMessages?: ThreadMessageLike[];
 }
 
 export function useDocAssistantRuntime({
   conversationId,
   providerConfigId,
+  collectionId,
   initialMessages,
 }: UseDocAssistantRuntimeOptions) {
   const convIdRef = { current: conversationId };
   convIdRef.current = conversationId;
   const provIdRef = { current: providerConfigId };
   provIdRef.current = providerConfigId;
+  const collIdRef = { current: collectionId };
+  collIdRef.current = collectionId;
 
   const adapter = useMemo(
     () =>
       createChatModelAdapter({
         getConversationId: () => convIdRef.current,
         getProviderConfigId: () => provIdRef.current,
+        getCollectionId: () => collIdRef.current,
       }),
     [] // stable — refs handle updates
   );

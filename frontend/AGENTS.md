@@ -13,6 +13,7 @@ This AGENTS.md covers the `frontend/` directory:
   - `Documents/` — Document and collection management components
   - `Settings/` — Configuration components
   - `Layout/` — Layout components (Sidebar)
+  - `common/` — Shared utility components (ToastContext, ErrorBoundary)
 - `src/services/` — API service layer
 - `src/hooks/` — Custom React hooks
 - `src/types/` — TypeScript type definitions
@@ -21,23 +22,28 @@ This AGENTS.md covers the `frontend/` directory:
 ## Local Contracts
 
 ### Pages
-- `Chat.tsx` — Main chat interface with conversation management
+- `Chat.tsx` — Chat interface with conversation management, collection scoping (dropdown to target queries to specific collections), setup validation (blocks new chat if LM Studio disconnected or no provider), and inline conversation rename
 - `Documents.tsx` — Document and collection management
 - `Settings.tsx` — Provider and embedding configuration
 
 ### Components
-- `AssistantChatView.tsx` — Chat message display and input
-- `CollectionList.tsx` — List and manage document collections
-- `DocumentList.tsx` — List and manage documents within collections
+- `AssistantChatView.tsx` — Chat message display and input with typing indicator via thread.isRunning
+- `CollectionList.tsx` — List and manage document collections (double-click to rename inline)
+- `DocumentList.tsx` — List and manage documents within collections (auto-polls every 3s for pending documents)
 - `ModelConfig.tsx` — LLM provider configuration
 - `EmbeddingConfig.tsx` — Embedding model configuration
 - `Sidebar.tsx` — Navigation sidebar
+- `common/ToastContext.tsx` — Toast notifications (success/error/warning/info, 4s auto-dismiss)
+- `common/ErrorBoundary.tsx` — React error boundary with user-friendly fallback
 
 ### Services
-- `api.ts` — API client for backend communication (base URL: http://localhost:8000)
+- `api.ts` — API client for backend communication (base URL: http://localhost:8000) — includes conversationsApi.update() for conversation rename/scoping
 
 ### Types
 - `index.ts` — TypeScript type definitions for all entities
+
+### Library
+- `assistant-runtime.ts` — @assistant-ui/react adapter with collectionId support for collection-scoped retrieval
 
 ## Work Guidance
 
@@ -58,14 +64,12 @@ Output: `frontend/dist/` with optimized and minified assets.
 ### Type Checking
 ```bash
 cd frontend
-npm run type-check
+npx tsc --noEmit
 ```
+No separate type-check script is defined in package.json; `npm run build` also runs `tsc` before Vite.
 
 ### Linting
-```bash
-cd frontend
-npm run lint
-```
+No lint script is currently configured. Add one to package.json if ESLint/Prettier is set up.
 
 ### Key Patterns
 - Functional components with hooks
@@ -76,9 +80,8 @@ npm run lint
 
 ## Verification
 
-- Type check: `npm run type-check`
-- Lint: `npm run lint`
-- Build: `npm run build`
+- Type check: `npx tsc --noEmit`
+- Build: `npm run build` (runs `tsc && vite build`)
 - Dev server: `npm run dev` (verify http://localhost:1420 loads)
 
 ## Child DOX Index

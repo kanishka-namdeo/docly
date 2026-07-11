@@ -70,6 +70,7 @@ export interface ProviderConfig {
   base_url: string | null
   api_key_ref: string | null
   created_at: string | null
+  is_default: boolean
 }
 
 export interface ChatRequest {
@@ -87,10 +88,10 @@ export interface ChatResponse {
   reasoning?: string
   iterations?: number
 }
-
 export interface LMStudioStatus {
   connected: boolean
   url: string
+  model: string | null
   models: string[] | null
   error: string | null
 }

@@ -27,6 +27,15 @@ async def init_db():
             ))
         except Exception:
             pass  # Column already exists or table doesn't exist yet
+        
+        # Add is_default column to provider_configs if it doesn't exist
+        try:
+            from sqlalchemy import text
+            await conn.execute(text(
+                "ALTER TABLE provider_configs ADD COLUMN is_default BOOLEAN NOT NULL DEFAULT 0"
+            ))
+        except Exception:
+            pass  # Column already exists or table doesn't exist yet
 
 @asynccontextmanager
 async def get_db_session():

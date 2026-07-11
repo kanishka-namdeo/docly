@@ -27,6 +27,33 @@ class ProviderConfigRepository:
         result = await self.session.execute(select(ProviderConfig).where(ProviderConfig.id == id))
         return result.scalar_one_or_none()
     
+    async def update(self, id: str, **kwargs) -> ProviderConfig | None:
+        config = await self.get_by_id(id)
+        if not config:
+            return None
+        
+        for key, value in kwargs.items():
+            if value is not None and hasattr(config, key):
+                setattr(config, key, value)
+        
+        await self.session.flush()
+        return config
+    
+    async def set_default(self, id: str) -> ProviderConfig | None:
+        # First, unset all defaults
+        result = await self.session.execute(select(ProviderConfig))
+        all_configs = result.scalars().all()
+        for config in all_configs:
+            config.is_default = False
+        
+        # Then set the specified one as default
+        config = await self.get_by_id(id)
+        if config:
+            config.is_default = True
+            await self.session.flush()
+            return config
+        return None
+    
     async def delete(self, id: str):
         config = await self.get_by_id(id)
         if config:

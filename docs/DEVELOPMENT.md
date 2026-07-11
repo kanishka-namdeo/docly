@@ -4,7 +4,7 @@
 
 - Python 3.11+
 - Node.js 18+
-- pnpm
+- npm
 - Rust (for Tauri)
 - LM Studio
 
@@ -27,7 +27,7 @@ pip install -r requirements.txt
 ### 3. Frontend setup
 ```bash
 cd frontend
-pnpm install
+npm install
 ```
 
 ### 4. LM Studio setup
@@ -37,28 +37,38 @@ pnpm install
 
 ## Running in Development
 
-### Backend
-```bash
-cd backend
-uvicorn app.main:app --reload --port 8000
-```
+### Option 1: Full Desktop App (Recommended)
 
-Backend runs at http://127.0.0.1:8000
-API docs at http://127.0.0.1:8000/docs
+Run the complete application with Tauri managing the frontend and backend:
 
-### Frontend
-```bash
-cd frontend
-pnpm dev
-```
-
-Frontend runs at http://localhost:1420
-
-### Tauri (desktop)
 ```bash
 cd src-tauri
 cargo tauri dev
 ```
+
+This:
+- Starts the frontend dev server (port 1420)
+- Builds and launches the Rust desktop application
+- Backend is started on-demand via Tauri's `start_backend` command (called from frontend)
+
+### Option 2: Separate Services (for API/frontend development)
+
+Run backend and frontend independently in separate terminals:
+
+**Terminal 1 — Backend:**
+```bash
+cd backend
+venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
+```
+
+**Terminal 2 — Frontend:**
+```bash
+cd frontend
+npm run dev
+```
+
+Backend runs at http://127.0.0.1:8000 (API docs: http://127.0.0.1:8000/docs)  
+Frontend runs at http://localhost:1420
 
 ## Running Tests
 
@@ -219,7 +229,7 @@ Output: `src-tauri/target/release/bundle/`
 ## Code Style
 
 - **Backend**: Black formatter, 100 char line length
-- **Frontend**: Prettier, ESLint
+- **Frontend**: Prettier (no ESLint configured); type-check via `npx tsc --noEmit`
 - **Types**: Strict TypeScript
 - **Tests**: pytest with descriptive names
 

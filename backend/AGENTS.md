@@ -27,6 +27,7 @@ This AGENTS.md covers the `backend/` directory:
 - `/collections` — Collection CRUD operations
 - `/documents` — Document management and indexing
 - `/conversations` — Conversation history management
+- `PUT /conversations/{id}` — Update conversation title or collection scope
 - `/chat` — Chat endpoint with agentic RAG
 - `/settings` — Provider and embedding configuration
 - `/health` — Health check endpoint

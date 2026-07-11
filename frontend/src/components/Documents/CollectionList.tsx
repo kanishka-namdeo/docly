@@ -7,6 +7,7 @@ interface CollectionListProps {
   onSelect: (collection: Collection) => void
   onDelete: (id: string) => void
   onCreate: (name: string, description?: string) => void
+  onRename: (id: string, name: string) => void
 }
 
 export default function CollectionList({
@@ -15,10 +16,13 @@ export default function CollectionList({
   onSelect,
   onDelete,
   onCreate,
+  onRename,
 }: CollectionListProps) {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [newName, setNewName] = useState('')
   const [newDescription, setNewDescription] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -98,7 +102,51 @@ export default function CollectionList({
             }}
           >
             <div style={{ flex: 1, overflow: 'hidden' }}>
-              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>{collection.name}</div>
+              {editingId === collection.id ? (
+                <input
+                  autoFocus
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onBlur={() => {
+                    if (editName.trim() && editName.trim() !== collection.name) {
+                      onRename(collection.id, editName.trim())
+                    }
+                    setEditingId(null)
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      if (editName.trim() && editName.trim() !== collection.name) {
+                        onRename(collection.id, editName.trim())
+                      }
+                      setEditingId(null)
+                    }
+                    if (e.key === 'Escape') setEditingId(null)
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    fontWeight: 'bold',
+                    marginBottom: '4px',
+                    border: '1px solid #0066cc',
+                    borderRadius: '2px',
+                    padding: '2px 4px',
+                    fontSize: 'inherit',
+                    width: '100%',
+                    outline: 'none',
+                  }}
+                />
+              ) : (
+                <div
+                  style={{ fontWeight: 'bold', marginBottom: '4px', cursor: 'text' }}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation()
+                    setEditingId(collection.id)
+                    setEditName(collection.name)
+                  }}
+                  title="Double-click to rename"
+                >
+                  {collection.name}
+                </div>
+              )}
               {collection.description && (
                 <div style={{ fontSize: '12px', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {collection.description}

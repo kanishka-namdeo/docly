@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, Text, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, String, Integer, Text, DateTime, ForeignKey, JSON, Boolean
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 class Base(DeclarativeBase):
@@ -69,3 +69,13 @@ class ProviderConfig(Base):
     model = Column(String, nullable=False)
     api_key_ref = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
+    is_default = Column(Boolean, default=False, nullable=False)
+
+class UserPreference(Base):
+    __tablename__ = "user_preferences"
+    
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    theme = Column(String, nullable=False, default="system")  # light, dark, system
+    language = Column(String, nullable=False, default="en")
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

@@ -87,6 +87,11 @@ export const conversationsApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  update: (id: string, data: { title?: string; collection_id?: string | null }) =>
+    request<Conversation>(`/conversations/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
   getMessages: (conversationId: string) =>
     request<Message[]>(`/conversations/${conversationId}/messages`),
   delete: async (id: string) => {
@@ -119,6 +124,30 @@ export const settingsApi = {
       method: 'POST',
       body: JSON.stringify(data),
     }),
+  updateProvider: (id: string, data: {
+    name?: string
+    type?: string
+    provider_name?: string
+    model?: string
+    base_url?: string
+    api_key?: string
+  }) =>
+    request<ProviderConfig>(`/settings/providers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
+  testProvider: (data: {
+    name: string
+    type: string
+    provider_name: string
+    model: string
+    base_url?: string
+    api_key?: string
+  }) =>
+    request<{ success: boolean; error: string | null }>('/settings/providers/test', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
   deleteProvider: async (id: string) => {
     const response = await fetch(`${API_BASE}/settings/providers/${id}`, { method: 'DELETE' })
     if (!response.ok && response.status !== 204) {
@@ -126,4 +155,19 @@ export const settingsApi = {
     }
   },
   checkLMStudio: () => request<LMStudioStatus>('/settings/lm-studio/status'),
+  setEmbeddingModel: (model: string) =>
+    request<{ status: string; model: string }>('/settings/embedding/model', {
+      method: 'POST',
+      body: JSON.stringify({ model }),
+    }),
+  setDefaultProvider: (id: string) =>
+    request<{ status: string; id: string; is_default: boolean }>(`/settings/providers/${id}/default`, {
+      method: 'PUT',
+    }),
+  getPreferences: () => request<{ theme: string; language: string }>('/settings/preferences'),
+  updatePreferences: (data: { theme?: string; language?: string }) =>
+    request<{ theme: string; language: string }>('/settings/preferences', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    }),
 }

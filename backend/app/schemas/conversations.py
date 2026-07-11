@@ -7,6 +7,10 @@ class ConversationCreate(BaseModel):
     title: str
     collection_id: Optional[str] = None
 
+class ConversationUpdate(BaseModel):
+    title: Optional[str] = None
+    collection_id: Optional[str] = None
+
 
 class ConversationResponse(BaseModel):
     id: str

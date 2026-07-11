@@ -35,6 +35,7 @@ Update the closest owning AGENTS.md when a change affects:
 Update parent docs when parent-level structure, ownership, workflow, or child index changes. Update child docs when parent changes alter local rules. Remove stale or contradictory text immediately. Small edits that do not change behavior or contracts may leave docs unchanged, but the DOX pass still must happen.
 
 ## Hierarchy
+
 - Root AGENTS.md is the DOX rail: project-wide instructions, global preferences, durable workflow rules, and the top-level Child DOX Index
 - Child AGENTS.md files own domain-specific instructions and their own Child DOX Index
 - Each parent explains what its direct children cover and what stays owned by the parent
@@ -76,6 +77,15 @@ Default section order:
 ## User Preferences
 
 When the user requests a durable behavior change, record it here or in the relevant child AGENTS.md
+
+### Running the App
+
+When the user asks to "run the app", "start the app", or "restart the app", always run the full Tauri desktop application with all services. Use `scripts/run_dev.sh` (or create it if missing). This starts:
+1. Python FastAPI backend (port 8000)
+2. Frontend dev server (via Tauri's beforeDevCommand)
+3. Tauri desktop window
+
+Never start only the backend or only the frontend — always launch the complete Tauri app.
 
 ### Proactive Web Search
 

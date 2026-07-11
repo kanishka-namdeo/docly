@@ -19,6 +19,23 @@ export default function DocumentList({ collection }: DocumentListProps) {
       .catch(err => console.error('Failed to load documents:', err))
       .finally(() => setLoading(false))
   }, [collection.id])
+  // Poll for status updates when documents are pending
+  useEffect(() => {
+    const hasPending = documents.some(d => d.status === 'pending')
+    if (!hasPending) return
+
+    const interval = setInterval(async () => {
+      try {
+        const updated = await documentsApi.list(collection.id)
+        setDocuments(updated)
+      } catch (err) {
+        console.error('Poll failed:', err)
+      }
+    }, 3000)
+
+    return () => clearInterval(interval)
+  }, [collection.id, documents.some(d => d.status === 'pending')])
+
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]

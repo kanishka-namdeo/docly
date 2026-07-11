@@ -46,7 +46,9 @@ pub struct BackendState {
 cd src-tauri
 cargo tauri dev
 ```
-This starts the frontend dev server, builds the Rust application, and launches the desktop window.
+This starts the frontend dev server (via `beforeDevCommand`), builds the Rust application, and launches the desktop window.
+
+**Backend lifecycle:** The Python backend is NOT started automatically. The frontend calls the `start_backend` Tauri command when needed, which spawns `uvicorn app.main:app` in the `../backend` directory. Call `stop_backend` to terminate it.
 
 ### Building for Production
 ```bash

@@ -1,5 +1,6 @@
 import ModelConfig from '../components/Settings/ModelConfig'
 import EmbeddingConfig from '../components/Settings/EmbeddingConfig'
+import PreferencesConfig from '../components/Settings/PreferencesConfig'
 
 export default function Settings() {
   return (
@@ -9,6 +10,7 @@ export default function Settings() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
         <ModelConfig />
         <EmbeddingConfig />
+        <PreferencesConfig />
       </div>
     </div>
   )

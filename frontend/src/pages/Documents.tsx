@@ -39,6 +39,17 @@ export default function Documents() {
       console.error('Failed to delete collection:', err)
     }
   }
+  const handleRenameCollection = async (id: string, name: string) => {
+    try {
+      const updated = await collectionsApi.update(id, { name })
+      setCollections(collections.map(c => c.id === id ? updated : c))
+      if (selectedCollection?.id === id) {
+        setSelectedCollection(updated)
+      }
+    } catch (err) {
+      console.error('Failed to rename collection:', err)
+    }
+  }
 
   if (loading) {
     return <div style={{ padding: '20px' }}>Loading...</div>
@@ -57,6 +68,7 @@ export default function Documents() {
           onSelect={setSelectedCollection}
           onDelete={handleDeleteCollection}
           onCreate={handleCreateCollection}
+          onRename={handleRenameCollection}
         />
       </div>
 

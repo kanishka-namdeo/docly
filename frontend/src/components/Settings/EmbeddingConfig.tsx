@@ -5,17 +5,32 @@ import { settingsApi } from '../../services/api'
 export default function EmbeddingConfig() {
   const [status, setStatus] = useState<LMStudioStatus | null>(null)
   const [loading, setLoading] = useState(false)
+  const [selectedModel, setSelectedModel] = useState<string>('')
 
   const checkStatus = async () => {
     setLoading(true)
     try {
       const s = await settingsApi.checkLMStudio()
       setStatus(s)
+      if (s.model) {
+        setSelectedModel(s.model)
+      }
     } catch (err) {
       console.error('Failed to check LM Studio status:', err)
-      setStatus({ connected: false, url: 'http://localhost:1234', models: null, error: null })
+      setStatus({ connected: false, url: 'http://localhost:1234', model: null, models: null, error: null })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleModelChange = async (model: string) => {
+    try {
+      await settingsApi.setEmbeddingModel(model)
+      setSelectedModel(model)
+      setStatus(prev => prev ? { ...prev, model } : null)
+    } catch (err) {
+      console.error('Failed to set embedding model:', err)
+      alert('Failed to change embedding model')
     }
   }
 
@@ -75,7 +90,28 @@ export default function EmbeddingConfig() {
               {status.connected ? 'Connected' : 'Not Connected'}
             </span>
             {status.connected && status.models && status.models.length > 0 && (
-              <span style={{ color: '#666', fontSize: '13px' }}>— {status.models[0]}</span>
+              <div style={{ marginTop: '10px' }}>
+                <label style={{ display: 'block', fontSize: '13px', marginBottom: '5px', color: '#666' }}>
+                  Embedding Model:
+                </label>
+                <select
+                  value={selectedModel}
+                  onChange={(e) => handleModelChange(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    borderRadius: '4px',
+                    border: '1px solid #ccc',
+                    fontSize: '13px',
+                  }}
+                >
+                  {status.models.map((model) => (
+                    <option key={model} value={model}>
+                      {model}
+                    </option>
+                  ))}
+                </select>
+              </div>
             )}
           </div>
         ) : (

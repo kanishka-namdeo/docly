@@ -11,7 +11,7 @@ class Settings(BaseSettings):
 
     # LM Studio
     lm_studio_url: str = "http://localhost:1234"
-    embedding_model: str = "nomic-embed-text-v1.5"
+    embedding_model: str = "text-embedding-nomic-embed-text-v1.5"
 
     # Arize Phoenix
     phoenix_enabled: bool = True
@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+
+    def set_embedding_model(self, model: str):
+        """Update the embedding model at runtime"""
+        self.embedding_model = model
 
 settings = Settings()
 

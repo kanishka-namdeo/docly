@@ -1,4 +1,4 @@
-import { ThreadPrimitive, ComposerPrimitive, MessagePrimitive, useMessage } from '@assistant-ui/react';
+import { ThreadPrimitive, ComposerPrimitive, MessagePrimitive, useMessage, useThread } from '@assistant-ui/react';
 import { MarkdownTextPrimitive } from '@assistant-ui/react-markdown';
 import type { Citation } from '../../types';
 import { useState } from 'react';
@@ -70,6 +70,19 @@ function AssistantMessageContent() {
   );
 }
 
+function TypingIndicator() {
+  const thread = useThread();
+  const isGenerating = thread.isRunning;
+  if (!isGenerating) return null;
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', color: '#888', fontSize: '13px' }}>
+      <span style={{ opacity: 0.6 }}>⋯</span>
+      Generating response…
+    </div>
+  );
+}
+
+
 export default function AssistantChatView() {
   return (
     <ThreadPrimitive.Root style={{ display: 'flex', flexDirection: 'column', height: '100%', minHeight: 0 }}>
@@ -97,6 +110,7 @@ export default function AssistantChatView() {
             ),
           }}
         />
+        <TypingIndicator />
       </ThreadPrimitive.Viewport>
       <div style={{ padding: '15px 20px', borderTop: '1px solid #ddd', flexShrink: 0 }}>
         <ComposerPrimitive.Root style={{ display: 'flex', gap: '10px', alignItems: 'flex-end' }}>

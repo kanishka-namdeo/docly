@@ -1,18 +1,17 @@
 {
-  "build": {
-    "beforeDevCommand": "cd frontend && npm run dev",
-    "beforeBuildCommand": "cd frontend && npm run build",
+  "identifier": "com.docassistant.app",
+  "productName": "Doc Assistant",
+  "version": "0.1.0",
+"build": {
+    "beforeDevCommand": null,
+    "beforeBuildCommand": "cd ../frontend && npm run build",
     "devUrl": "http://localhost:1420",
     "frontendDist": "../frontend/dist"
   },
-  "package": {
-    "productName": "Doc Assistant",
-    "version": "0.1.0"
-  },
   "app": {
-    "title": "Doc Assistant",
     "windows": [
       {
+        "label": "main",
         "fullscreen": false,
         "resizable": true,
         "title": "Doc Assistant",
@@ -27,7 +26,6 @@
   "bundle": {
     "active": true,
     "targets": "all",
-    "identifier": "com.docassistant.app",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

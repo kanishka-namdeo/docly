@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Shell scripts for building the Python backend, React frontend, and packaging the complete desktop application.
+Shell scripts for building the Python backend, React frontend, and packaging the complete desktop application, as well as running the development environment.
 
 ## Ownership
 
@@ -10,8 +10,31 @@ This AGENTS.md covers the `scripts/` directory:
 - `build_backend.sh` — Build Python backend with PyInstaller
 - `build_frontend.sh` — Build React frontend for production
 - `package.sh` — Package complete application
+- `run_dev.sh` — Unified development startup (Unix/Linux/Mac)
+- `run_dev.ps1` — Unified development startup (Windows PowerShell)
 
 ## Local Contracts
+
+### run_dev.sh / run_dev.ps1
+Unified development startup script that launches the complete Tauri application with all services:
+1. Starts Python FastAPI backend (port 8000)
+2. Starts frontend dev server (via Tauri's beforeDevCommand)
+3. Launches Tauri desktop window
+
+**Usage:**
+```bash
+# Unix/Linux/Mac
+./scripts/run_dev.sh
+
+# Windows PowerShell
+.\scripts\run_dev.ps1
+```
+
+**Features:**
+- Checks prerequisites (Node.js, Python, Rust)
+- Waits for backend to be ready before starting Tauri
+- Handles cleanup on Ctrl+C
+- Builds frontend if needed before launching Tauri
 
 ### build_backend.sh
 Builds the Python backend for production:
@@ -39,7 +62,16 @@ Packages the complete desktop application:
 
 ## Work Guidance
 
-### Build Order
+### Development (Recommended)
+Use the unified run script to start the complete development environment:
+```bash
+./scripts/run_dev.sh        # Unix/Linux/Mac
+.\scripts\run_dev.ps1       # Windows PowerShell
+```
+
+This launches backend, frontend, and Tauri desktop app together.
+
+### Build Order (for packaging)
 ```bash
 # 1. Build backend
 ./scripts/build_backend.sh
@@ -61,6 +93,7 @@ cargo tauri build
 
 ## Verification
 
+- **run_dev scripts**: Verify backend responds at http://localhost:8000/health and Tauri window opens
 - Backend build: Verify `backend/dist/backend` (or `backend.exe`) exists and is executable
 - Frontend build: Verify `frontend/dist/` contains optimized assets
 - Package: Verify all artifacts are in place for Tauri build

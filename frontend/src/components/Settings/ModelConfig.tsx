@@ -11,7 +11,7 @@ const BUILTIN_PROVIDERS = [
 export default function ModelConfig() {
   const [providers, setProviders] = useState<ProviderConfig[]>([])
   const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
+  const [editingProviderId, setEditingProviderId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     name: '',
     type: 'builtin' as 'builtin' | 'custom',
@@ -20,6 +20,9 @@ export default function ModelConfig() {
     base_url: '',
     api_key_ref: '',
   })
+  const [testingConnection, setTestingConnection] = useState(false)
+  const [testResult, setTestResult] = useState<{ success: boolean; error: string | null } | null>(null)
+  const [showForm, setShowForm] = useState(false)
 
   useEffect(() => {
     settingsApi.listProviders()
@@ -31,16 +34,31 @@ export default function ModelConfig() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     try {
-      const newProvider = await settingsApi.createProvider({
-        name: formData.name,
-        type: formData.type,
-        provider_name: formData.provider_name,
-        model: formData.model,
-        base_url: formData.type === 'custom' ? formData.base_url : undefined,
-        api_key_ref: formData.api_key_ref || undefined,
-      })
-      setProviders([...providers, newProvider])
+      if (editingProviderId) {
+        // Update existing provider
+        const updatedProvider = await settingsApi.updateProvider(editingProviderId, {
+          name: formData.name,
+          type: formData.type,
+          provider_name: formData.provider_name,
+          model: formData.model,
+          base_url: formData.type === 'custom' ? formData.base_url : undefined,
+          api_key: formData.api_key_ref || undefined,
+        })
+        setProviders(providers.map(p => p.id === editingProviderId ? updatedProvider : p))
+      } else {
+        // Create new provider
+        const newProvider = await settingsApi.createProvider({
+          name: formData.name,
+          type: formData.type,
+          provider_name: formData.provider_name,
+          model: formData.model,
+          base_url: formData.type === 'custom' ? formData.base_url : undefined,
+          api_key_ref: formData.api_key_ref || undefined,
+        })
+        setProviders([...providers, newProvider])
+      }
       setShowForm(false)
+      setEditingProviderId(null)
       setFormData({
         name: '',
         type: 'builtin',
@@ -50,9 +68,22 @@ export default function ModelConfig() {
         api_key_ref: '',
       })
     } catch (err) {
-      console.error('Failed to create provider:', err)
-      alert('Failed to create provider')
+      console.error('Failed to save provider:', err)
+      alert('Failed to save provider')
     }
+  }
+
+  const handleEdit = (provider: ProviderConfig) => {
+    setEditingProviderId(provider.id)
+    setFormData({
+      name: provider.name,
+      type: provider.type as 'builtin' | 'custom',
+      provider_name: provider.provider_name,
+      model: provider.model,
+      base_url: provider.base_url || '',
+      api_key_ref: '',
+    })
+    setShowForm(true)
   }
 
   const handleDelete = async (id: string) => {
@@ -62,6 +93,36 @@ export default function ModelConfig() {
       setProviders(providers.filter(p => p.id !== id))
     } catch (err) {
       console.error('Failed to delete provider:', err)
+    }
+  }
+
+  const handleSetDefault = async (id: string) => {
+    try {
+      await settingsApi.setDefaultProvider(id)
+      const updatedProviders = await settingsApi.listProviders()
+      setProviders(updatedProviders)
+    } catch (err) {
+      console.error('Failed to set default provider:', err)
+    }
+  }
+
+  const handleTestConnection = async () => {
+    setTestingConnection(true)
+    setTestResult(null)
+    try {
+      const result = await settingsApi.testProvider({
+        name: formData.name,
+        type: formData.type,
+        provider_name: formData.provider_name,
+        model: formData.model,
+        base_url: formData.type === 'custom' ? formData.base_url : undefined,
+        api_key: formData.api_key_ref || undefined,
+      })
+      setTestResult(result)
+    } catch (err) {
+      setTestResult({ success: false, error: err instanceof Error ? err.message : 'Unknown error' })
+    } finally {
+      setTestingConnection(false)
     }
   }
 
@@ -162,6 +223,36 @@ export default function ModelConfig() {
             />
           </div>
 
+          {testResult && (
+            <div style={{
+              padding: '10px',
+              marginBottom: '12px',
+              backgroundColor: testResult.success ? '#d4edda' : '#f8d7da',
+              color: testResult.success ? '#155724' : '#721c24',
+              border: `1px solid ${testResult.success ? '#c3e6cb' : '#f5c6cb'}`,
+              borderRadius: '4px',
+            }}>
+              {testResult.success ? '✓ Connection successful!' : `✗ Connection failed: ${testResult.error}`}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              type="button"
+              onClick={handleTestConnection}
+              disabled={testingConnection}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: testingConnection ? '#6c757d' : '#28a745',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: testingConnection ? 'not-allowed' : 'pointer',
+              }}
+            >
+              {testingConnection ? 'Testing...' : 'Test Connection'}
+            </button>
+          </div>
+
           <button
             type="submit"
             style={{
@@ -173,7 +264,7 @@ export default function ModelConfig() {
               cursor: 'pointer',
             }}
           >
-            Add Provider
+            {editingProviderId ? 'Update Provider' : 'Add Provider'}
           </button>
         </form>
       )}
@@ -203,20 +294,51 @@ export default function ModelConfig() {
                   {provider.provider_name} — {provider.model}
                   {provider.base_url && ` (${provider.base_url})`}
                 </div>
+                <button
+                  onClick={() => handleSetDefault(provider.id)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: provider.is_default ? '#ffc107' : '#ccc',
+                    fontSize: '18px',
+                    padding: '5px',
+                  }}
+                  title={provider.is_default ? 'Default provider' : 'Set as default'}
+                >
+                  ★
+                </button>
               </div>
-              <button
-                onClick={() => handleDelete(provider.id)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: '#dc3545',
-                  fontSize: '18px',
-                  padding: '5px',
-                }}
-              >
-                ×
-              </button>
+              <div style={{ display: 'flex', gap: '5px' }}>
+                <button
+                  onClick={() => handleEdit(provider)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#0066cc',
+                    fontSize: '18px',
+                    padding: '5px',
+                  }}
+                  title="Edit provider"
+                >
+                  ✎
+                </button>
+                <button
+                  onClick={() => handleDelete(provider.id)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: '#dc3545',
+                    fontSize: '18px',
+                    padding: '5px',
+                  }}
+                  title="Delete provider"
+                >
+                  ×
+                </button>
+              </div>
             </div>
           ))}
         </div>

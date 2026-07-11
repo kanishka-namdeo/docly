@@ -7,6 +7,7 @@ from app.database.repositories.conversations import ConversationRepository
 from app.database.repositories.messages import MessageRepository
 from app.schemas.conversations import (
     ConversationCreate,
+    ConversationUpdate,
     ConversationResponse,
     MessageCreate,
     MessageResponse,
@@ -46,6 +47,23 @@ async def get_conversation(
     conversation = await repo.get_by_id(conversation_id)
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")
+    return conversation
+
+
+@router.put("/{conversation_id}", response_model=ConversationResponse)
+async def update_conversation(
+    conversation_id: str,
+    body: ConversationUpdate,
+    session: AsyncSession = Depends(get_session)
+):
+    repo = ConversationRepository(session)
+    update_data = body.model_dump(exclude_unset=True)
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    conversation = await repo.get_by_id(conversation_id)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    conversation = await repo.update(conversation_id, **update_data)
     return conversation
 
 
